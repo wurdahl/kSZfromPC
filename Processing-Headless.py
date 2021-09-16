@@ -15,27 +15,60 @@ import threading
 
 import matplotlib.pyplot as plt
 import healpy as hp
-nside = 64
+nside = 128
 npix = hp.nside2npix(nside)
+
+#get_ipython().run_line_magic('matplotlib', 'inline')
 
 
 # In[3]:
 
 
-def convertToSpherical(xyz):
-    # col 0: r, col 1: theta, col 2: phi
-    sphericalPositons = np.zeros((len(xyz),3))
-    xySquared = xyz[:,0]**2 + xyz[:,1]**2
-    # r
-    sphericalPositons[:,0] = np.sqrt(xySquared+xyz[:,2]**2)
-    # theta - many options for this calc
-    sphericalPositons[:,1] = np.arctan2(np.sqrt(xySquared), xyz[:,2])
-    # phi
-    sphericalPositons[:,2] = np.arctan2(xyz[:,1],xyz[:,0])
-    return sphericalPositons
+def getRadialUnitVecs(spherePos):
+    unitVecs = np.zeros((len(spherePos),3))
+    
+    #negative because you want it pointing towards the origin    
+    unitVecs[:,0] = -np.multiply(np.cos(spherePos[:,2]),np.sin(spherePos[:,1]))
+    unitVecs[:,1] = -np.multiply(np.sin(spherePos[:,2]),np.sin(spherePos[:,1]))
+    unitVecs[:,2] = -np.cos(spherePos[:,1])
+    
+    return unitVecs
 
 
 # In[4]:
+
+
+def convertToSpherical(xyz):
+    #variables
+    sphericalConversion = np.zeros((len(xyz),4))
+    vel = np.zeros((len(xyz),3))
+    
+    # col 0: r, col 1: theta, col 2: phi
+    
+    xySquared = xyz[:,0]**2 + xyz[:,1]**2
+    # r
+    sphericalConversion[:,0] = np.sqrt(xySquared+xyz[:,2]**2)
+    # theta - many options for this calc
+    sphericalConversion[:,1] = np.arctan2(np.sqrt(xySquared), xyz[:,2])
+    # phi
+    sphericalConversion[:,2] = np.arctan2(xyz[:,1],xyz[:,0])
+    
+    #convert velocity to radial velocity over radius
+    
+    vel[:,0] = xyz[:,3]/sphericalConversion[:,0]
+    vel[:,1] = xyz[:,4]/sphericalConversion[:,0]
+    vel[:,2] = xyz[:,5]/sphericalConversion[:,0]
+    
+    unitVectors = getRadialUnitVecs(sphericalConversion)
+    
+    #get the radial 
+    for i in range(len(xyz)):
+        sphericalConversion[i,3] = np.dot(vel[i],unitVectors[i])
+    
+    return sphericalConversion
+
+
+# In[5]:
 
 
 # Reading lp-cola unformatted files
@@ -60,47 +93,63 @@ def unf_read_file(file, p_list=[], np=6):
     return tot_n
 
 
-# In[5]:
+# In[6]:
 
 
 def readSetToBins(startFile, stopFile, index):
     tempArray = []
     numcount = []
+    totalVelThread = np.zeros(npix)
     for i in range(startFile,stopFile):
         path = "Data/cone_test_lightcone."+str(i)
         if os.path.isfile(path):
             unf_read_file(path, p_list=tempArray)
 
-            positionFormatted = np.reshape(tempArray,(-1,6))[:,0:3]
+            reshaped = np.reshape(tempArray,(-1,6))
             tempArray = []
+                                 
+            offset = np.append(64*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
             
-            positionFormatted = np.subtract(positionFormatted,64*np.ones(np.shape(positionFormatted)))
+            reshaped = np.subtract(reshaped,offset)
             
-            sphereCoord = convertToSpherical(positionFormatted)
+            sphereConversion = convertToSpherical(reshaped)
             
-            positionFormatted = []
+            reshaped = []
             
             #only take points within a certain radius
-            sphereCoord = sphereCoord[sphereCoord[:,0]<200]
+            sphereConversion = sphereConversion[sphereConversion[:,0]<30]
 
-            pixIndicies = hp.ang2pix(nside,sphereCoord[:,1],sphereCoord[:,2])
+            #determine how many points are in each bin
+            pixIndicies = hp.ang2pix(nside,sphereConversion[:,1],sphereConversion[:,2])
 
             if len(numcount)==0:
                 numcount = np.bincount(pixIndicies, minlength=npix)
             else:
                 numcount = np.add(numcount, np.bincount(pixIndicies, minlength=npix) )
+                
+            #do the math for the SZ effect
+            
+            #sum all velocities in each bin together
+            if(len(pixIndicies)>0):
+                for j in range(np.amin(pixIndicies),np.amax(pixIndicies)+1):
+                    velInBin = sphereConversion[pixIndicies==j][:,3]
+                    totalVelThread[j] = np.sum(velInBin,axis=0)
+            
             if i%10==0:
                 print(i)
         
-        outputs[index] = numcount
+        #set global variable to output for return
+        outputCount[index] = numcount
+        outputSZ[index] = totalVelThread
 
 
-# In[6]:
+# In[7]:
 
 
-numThreads = 16
+numThreads = 32
 ranges = np.linspace(0,32,numThreads+1).astype(int)
-outputs = [None]*numThreads
+outputCount = [None]*numThreads
+outputSZ = [None]*numThreads
 
 threads = [None]*numThreads
 
@@ -116,21 +165,29 @@ for i in range(0,numThreads):
     threads[i].join()
 
 
+# In[8]:
+
+
+numcount = np.sum(outputCount,axis=0)
+print(sum(numcount))
+
+n_bar = np.average(numcount)
+overdensity = (numcount-n_bar)/n_bar
+
+hp.fitsfunc.write_map("DensityCount.fits", numcount, overwrite=True)
+
+
 # In[9]:
 
 
-numcount = np.cumsum(outputs,axis=0)
-print(sum(numcount[-1]))
-
-print("NSIDE = "+str(nside))
-
-hp.fitsfunc.write_map("Map.fits", numcount[-1], overwrite=True)
+hp.fitsfunc.write_map("overdensity.fits", overdensity, overwrite=True)
 
 
-# In[ ]:
+# In[14]:
 
 
-
+almostSZ = np.sum(outputSZ,axis=0)
+hp.fitsfunc.write_map("kSZ.fits", almostSZ, overwrite=True)
 
 
 # In[ ]:
