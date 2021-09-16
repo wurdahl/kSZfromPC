@@ -55,9 +55,9 @@ def convertToSpherical(xyz):
     
     #convert velocity to radial velocity over radius
     
-    vel[:,0] = xyz[:,3]/sphericalConversion[:,0]
-    vel[:,1] = xyz[:,4]/sphericalConversion[:,0]
-    vel[:,2] = xyz[:,5]/sphericalConversion[:,0]
+    vel[:,0] = xyz[:,3]/np.power(sphericalConversion[:,0],2)
+    vel[:,1] = xyz[:,4]/np.power(sphericalConversion[:,0],2)
+    vel[:,2] = xyz[:,5]/np.power(sphericalConversion[:,0],2)
     
     unitVectors = getRadialUnitVecs(sphericalConversion)
     
