@@ -180,19 +180,21 @@ def readSetToBins(startFile, stopFile, index):
                         velInBin = radialRange[pixIndicies==k][:,3]
                         totalVelThread[j,k] = np.sum(velInBin,axis=0)
             
-            if i%10==0:
-                print(i)
+            
+            print(str(i)+" done")
                 
         return [numcount, totalVelThread]
 
 
-# In[9]:
+# In[ ]:
 
 
 numProcess = 32
 ranges = np.linspace(0,32,numProcess+1).astype(int)
 
 returnValues = Parallel(n_jobs=numProcess)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+
+print("Read all Files")
 
 
 # In[ ]:
@@ -319,7 +321,11 @@ numProcess = 64
 
 pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
 
+print("Starting to Calculate Convergences")
+
 convergenceReturn = Parallel(n_jobs=numProcess)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
+
+print("Calculated Convergences")
 
 #to each pixel:
 #convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))
