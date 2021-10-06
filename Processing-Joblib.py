@@ -18,18 +18,20 @@ import healpy as hp
 nside = 128
 npix = hp.nside2npix(nside)
 
-get_ipython().run_line_magic('matplotlib', 'inline')
+#%matplotlib inline
 
 
 # In[3]:
 
 
 rangeOfInterest=512 #only look at particles within this
-radialDivs = 64
+radialDivs = 8
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize=1024 # side length of box
 particleSize=128 #the total number of particles is n**3
+
+num_Files = 32
 
 run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)
 
@@ -178,7 +180,7 @@ def readSetToBins(startFile, stopFile, index):
             
                 #sum all velocities in each bin together
                 if(len(pixIndicies)>0):
-                    for k in range(np.amin(pixIndicies),np.amax(pixIndicies)+1):
+                    for k in np.unique(pixIndicies):
                         velInBin = radialRange[pixIndicies==k][:,3]
                         totalVelThread[j,k] = np.sum(velInBin,axis=0)
             
@@ -188,18 +190,18 @@ def readSetToBins(startFile, stopFile, index):
         return [numcount, totalVelThread]
 
 
-# In[ ]:
+# In[9]:
 
 
 numProcess = 32
-ranges = np.linspace(0,32,numProcess+1).astype(int)
+ranges = np.linspace(0,num_Files,numProcess+1).astype(int)
 
 returnValues = Parallel(n_jobs=-1)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
 
 print("Read all Files")
 
 
-# In[ ]:
+# In[10]:
 
 
 #structure of returnValues is weird
@@ -214,7 +216,7 @@ outputCount = np.sum(np.array(returnValues)[0:numProcess,0],axis=0)
 outputkSZ = np.sum(np.array(returnValues)[0:numProcess,1],axis=0)
 
 
-# In[ ]:
+# In[11]:
 
 
 #combine the different radial divs for viewing
@@ -227,27 +229,27 @@ overdensity = (numcount-n_bar)/n_bar
 #hp.mollview(numcount,xsize=3200, max=1000)
 
 
-# In[ ]:
+# In[12]:
 
 
 #hp.mollview(overdensity,xsize=3200,max=5)
 hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
 
 
-# In[ ]:
+# In[13]:
 
 
 almostkSZ = np.sum(outputkSZ,axis=0)
 #hp.mollview(almostkSZ,xsize=3200,min=-30,max=30)
 
 
-# In[ ]:
+# In[14]:
 
 
 #plt.hist(almostkSZ,bins=np.linspace(-30,30));
 
 
-# In[ ]:
+# In[15]:
 
 
 OmegaB = 0.048
@@ -280,13 +282,13 @@ almosterkSZ = -(sigmaT*fb*mu)*(correctUnits/(c*hp.nside2resol(nside)**2))
 hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", almosterkSZ, overwrite=True)
 
 
-# In[ ]:
+# In[16]:
 
 
 #plt.hist(almosterkSZ,bins=np.linspace(-2*10**-6,2*10**-6));
 
 
-# In[ ]:
+# In[17]:
 
 
 #Now we determine the convergence maps
@@ -316,20 +318,33 @@ def getConvergenceForRange(start, finish):
     return convergences
 
 
-# In[ ]:
+# In[18]:
 
 
-get_ipython().run_cell_magic('timeit', '', 'npix = hp.nside2npix(nside)\n\nnumProcess = 64\n\npixelSteps = np.linspace(0,npix,numProcess+1).astype(int)\n\nprint("Starting to Calculate Convergences")\n\nconvergenceReturn = Parallel(n_jobs=-1)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))\n\nprint("Calculated Convergences")\n\n#to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
+npix = hp.nside2npix(nside)
+
+numProcess = 64
+
+pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
+
+print("Starting to Calculate Convergences")
+
+convergenceReturn = Parallel(n_jobs=-1)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
+
+print("Calculated Convergences")
+
+#to each pixel:
+#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))
 
 
-# In[ ]:
+# In[19]:
 
 
 #to not get a ragged array, npix must be divisible by numProcess
 convergenceMaps = np.transpose(np.array(convergenceReturn).reshape((npix,radialDivs)))
 
 
-# In[ ]:
+# In[20]:
 
 
 H0Squared = 1
@@ -339,7 +354,7 @@ prefactors = (3/2)*H0Squared*OmegaM
 convergenceMaps = prefactors*convergenceMaps
 
 
-# In[ ]:
+# In[21]:
 
 
 #hp.mollview(np.sum(convergenceMaps,axis=0))
