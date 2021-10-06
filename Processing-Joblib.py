@@ -24,12 +24,14 @@ get_ipython().run_line_magic('matplotlib', 'inline')
 # In[3]:
 
 
-rangeOfInterest=128 #only look at particles within this
-radialDivs = 32
+rangeOfInterest=512 #only look at particles within this
+radialDivs = 64
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
-boxSize=512 # side length of box
-particleSize=256 #the total number of particles is n**3
+boxSize=1024 # side length of box
+particleSize=128 #the total number of particles is n**3
+
+run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)
 
 
 # In[4]:
@@ -192,7 +194,7 @@ def readSetToBins(startFile, stopFile, index):
 numProcess = 32
 ranges = np.linspace(0,32,numProcess+1).astype(int)
 
-returnValues = Parallel(n_jobs=numProcess)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=-1)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
 
 print("Read all Files")
 
@@ -229,7 +231,7 @@ overdensity = (numcount-n_bar)/n_bar
 
 
 #hp.mollview(overdensity,xsize=3200,max=5)
-hp.fitsfunc.write_map("overdensity.fits", overdensity, overwrite=True)
+hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
 
 
 # In[ ]:
@@ -275,7 +277,7 @@ correctUnits = almostkSZ*(unitMass*unitVelocity/unitLength**2)
 
 almosterkSZ = -(sigmaT*fb*mu)*(correctUnits/(c*hp.nside2resol(nside)**2))
 #hp.mollview(almosterkSZ,xsize=3200,min=-2*10**-6,max=2*10**-6)
-hp.fitsfunc.write_map("kSZ.fits", almosterkSZ, overwrite=True)
+hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", almosterkSZ, overwrite=True)
 
 
 # In[ ]:
@@ -303,6 +305,8 @@ def getConvergenceForPixel(pixelIndex):
             lensingLayerDist = (lensingLayer+0.5)*(dr)
         
             convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
+            #simplification:
+            #convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(dr*getScalingFactor(lensingLayerDist)))*(kSZLayer-lensingLayer)/((0.5+kSZLayer)*(0.5+lensingLayer))
     return convergencePixels
 
 def getConvergenceForRange(start, finish):
@@ -315,20 +319,7 @@ def getConvergenceForRange(start, finish):
 # In[ ]:
 
 
-npix = hp.nside2npix(nside)
-
-numProcess = 64
-
-pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
-
-print("Starting to Calculate Convergences")
-
-convergenceReturn = Parallel(n_jobs=numProcess)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
-
-print("Calculated Convergences")
-
-#to each pixel:
-#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))
+get_ipython().run_cell_magic('timeit', '', 'npix = hp.nside2npix(nside)\n\nnumProcess = 64\n\npixelSteps = np.linspace(0,npix,numProcess+1).astype(int)\n\nprint("Starting to Calculate Convergences")\n\nconvergenceReturn = Parallel(n_jobs=-1)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))\n\nprint("Calculated Convergences")\n\n#to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
 
 
 # In[ ]:
@@ -352,7 +343,7 @@ convergenceMaps = prefactors*convergenceMaps
 
 
 #hp.mollview(np.sum(convergenceMaps,axis=0))
-hp.fitsfunc.write_map("convergence.fits", np.sum(convergenceMaps,axis=0), overwrite=True)
+hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", np.sum(convergenceMaps,axis=0), overwrite=True)
 
 
 # In[ ]:
