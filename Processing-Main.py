@@ -15,7 +15,7 @@ from joblib import Parallel, delayed
 
 #import matplotlib.pyplot as plt
 import healpy as hp
-nside = 512
+nside = 2048
 npix = hp.nside2npix(nside)
 
 #%matplotlib inline
@@ -25,13 +25,13 @@ npix = hp.nside2npix(nside)
 
 
 rangeOfInterest=512 #only look at particles within this
-radialDivs = 16
+radialDivs = 1
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize=1024 # side length of box
 particleSize=768 #the total number of particles is n**3
 
-run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)
+run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
 
 
 # In[4]:
@@ -74,6 +74,10 @@ getRedshift = interp1d(comovDist, redshifts)
 def getScalingFactor(comov_dist):
     return 1/(1+getRedshift(comov_dist))
 
+del comovDist
+del angDiaDist
+del redshifts
+del LambdaCDM
 
 # In[6]:
 
@@ -217,9 +221,15 @@ print("Read all Files")
 
 #combine the returns from each processor by summing the first axis
 
-outputCount = np.sum(np.array(returnValues)[0:numProcess,0],axis=0)
-outputkSZ = np.sum(np.array(returnValues)[0:numProcess,1],axis=0)
+#this can be a very memory intensive part:
 
+numpyReturn = np.array(returnValues)
+del returnValues
+
+outputCount = np.sum(numpyReturn[0:numProcess,0],axis=0)
+outputkSZ = np.sum(numpyReturn[0:numProcess,1],axis=0)
+
+del numpyReturn
 
 # In[11]:
 
