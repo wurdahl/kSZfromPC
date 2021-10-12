@@ -117,7 +117,7 @@ def readSetToBins(startFile, stopFile, index):
             #fileTime = time.perf_counter()
             #print("file done at "+str(fileTime-begin))
             offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
-            
+
             reshaped = np.subtract(reshaped,offset)
             del offset
             #timeOffset = time.perf_counter()
@@ -130,7 +130,7 @@ def readSetToBins(startFile, stopFile, index):
             #timeConversion = time.perf_counter()
             #print("Sphere Conversion done at " +str(timeConversion-begin))
             #bin points into the correct bins (radial, theta, phi bins)
-            
+
             for j in range(0,radialDivs):
                 #select all the point in each radial range
                 #beginSelect = time.perf_counter()
@@ -139,29 +139,21 @@ def readSetToBins(startFile, stopFile, index):
                 #print("it took "+str(endSelect-beginSelect)+"to select range")
                 #determine how many points are in each bin
                 pixIndicies = hp.ang2pix(nside,radialRange[:,1],radialRange[:,2])
-                
-                #if numcount[j]==None:
-                #    numcount[j] == np.zeros(npix)
-                #    numcount[j] = np.bincount(pixIndicies, minlength=npix)
-                #else:
-                numcount[j] = np.add(numcount[j], ProcessingFunctions.binParticles(pixIndicies, npix))
-                
+
                 #do the math for the SZ effect
-            
+
                 #sum all velocities in each bin together
                 #beginVel = time.perf_counter()
                 if(len(pixIndicies)>0):
-                    #for k in np.unique(pixIndicies):
-                    #    velInBin = radialRange[pixIndicies==k][:,3]
-                    #    totalVelThread[j,k] = np.sum(velInBin,axis=0)
-                    totalVelThread[j,:] = ProcessingFunctions.binVelocities(pixIndicies,radialRange[:,3],npix)
+                    numcount[j] = np.add(numcount[j], ProcessingFunctions.binParticles(pixIndicies, npix))
+                    totalVelThread[j] = np.add(totalVelThread[j],ProcessingFunctions.binVelocities(pixIndicies,radialRange[:,3],npix))
                 #endVel = time.perf_counter()
                 #print("it took "+str(endVel-beginVel)+"to bin Vel")
- 
+
             #binTime = time.perf_counter()
             #print("Binning done at "+str(binTime-begin))
             print(str(i)+" done")
-   
+
     return [numcount, totalVelThread]
 
 
@@ -284,7 +276,7 @@ for kSZLayer in range(0,radialDivs):
     for lensingLayer in range(0,kSZLayer):
         kSZDist = (kSZLayer+0.5)*(dr)
         lensingLayerDist = (lensingLayer+0.5)*(dr)
-        
+
         convergenceFactors[kSZLayer,lensingLayer] = (1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
 
 
@@ -305,9 +297,9 @@ def getConvergenceForPixel(pixelIndex):
         for lensingLayer in range(0,kSZLayer):
             kSZDist = (kSZLayer+0.5)*(dr)
             lensingLayerDist = (lensingLayer+0.5)*(dr)
-        
+
             convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
-            
+
     return convergencePixels
 
 def getConvergenceForPixelMat(pixelIndex):
@@ -358,7 +350,3 @@ hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", np.sum(convergenceMa
 
 
 # In[ ]:
-
-
-
-
