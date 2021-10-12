@@ -15,7 +15,7 @@ from joblib import Parallel, delayed
 
 #import matplotlib.pyplot as plt
 import healpy as hp
-nside = 1024
+nside = 128
 npix = hp.nside2npix(nside)
 
 #%matplotlib inline
@@ -95,7 +95,7 @@ def unf_read_file(file, p_list=[], np=6):
 
 # In[8]:
 
-direc = "/data/wurdahl/l-picola/output/"
+direc = "/home/urdahl/home/dockerFirst/Data/"
 inputFiles = os.listdir(direc)
 print("Found "+str(len(inputFiles))+" Files")
 
@@ -171,7 +171,7 @@ num_Files = len(inputFiles)
 numProcess = num_Files
 ranges = np.linspace(0,num_Files,numProcess+1).astype(int)
 
-returnValues = Parallel(n_jobs=-30)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=5)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 

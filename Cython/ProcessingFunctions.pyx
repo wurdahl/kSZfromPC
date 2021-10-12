@@ -12,8 +12,7 @@ from libc.math cimport atan2
 from libcpp cimport vector
 
 #getRadialUnitVecs
-cdef getRadialUnitVecs(spherePosNp):
-    cdef double[:,:] spherePos = spherePosNp 
+cdef getRadialUnitVecs(double[:,:] spherePos): 
 
     cdef int rows = spherePos.shape[0]
     unitVecs = np.zeros((rows,3))
@@ -30,9 +29,8 @@ cdef getRadialUnitVecs(spherePosNp):
 
 #convertToSpherical
 
-cpdef convertToSpherical(xyz):
-    cdef double[:,:] xyz_view = xyz
-    cdef int rows = xyz_view.shape[0]
+cpdef convertToSpherical(double[:,:] xyz):
+    cdef int rows = xyz.shape[0]
     #variables
     sphericalConversion = np.zeros((rows,4))
     cdef double[:,:] sphericalConversion_view = sphericalConversion    
@@ -43,57 +41,57 @@ cpdef convertToSpherical(xyz):
 
     for i in range(0,rows):
 
-        xySquared = pow(xyz_view[i,0],2) + pow(xyz_view[i,1],2)
+        xySquared = pow(xyz[i,0],2) + pow(xyz[i,1],2)
 
         # r
-        sphericalConversion_view[i,0] = sqrt(xySquared+pow(xyz_view[i,2],2))
+        sphericalConversion_view[i,0] = sqrt(xySquared+pow(xyz[i,2],2))
         
         # theta - many options for this calc
-        sphericalConversion_view[i,1] = atan2(sqrt(xySquared), xyz_view[i,2])
+        sphericalConversion_view[i,1] = atan2(sqrt(xySquared), xyz[i,2])
     
         # phi
-        sphericalConversion_view[i,2] = atan2(xyz_view[i,1],xyz_view[i,0])
+        sphericalConversion_view[i,2] = atan2(xyz[i,1],xyz[i,0])
     
-    unitVectors = getRadialUnitVecs(sphericalConversion)
+    #unitVectors = getRadialUnitVecs(sphericalConversion)
     
-    cdef double[:,:] unitVectors_view = unitVectors
+    cdef double[:,:] unitVectors = getRadialUnitVecs(sphericalConversion)
 
     #get the radial 
     for i in range(rows):
-        sphericalConversion_view[i,3] = unitVectors_view[i,0]*xyz_view[i,3]+unitVectors_view[i,1]*xyz_view[i,4]+unitVectors_view[i,2]*xyz_view[i,5]
-    
+        sphericalConversion_view[i,3] = unitVectors[i,0]*xyz[i,3]+unitVectors[i,1]*xyz[i,4]+unitVectors[i,2]*xyz[i,5]
+
     return sphericalConversion
 
 
 #bin Particles
 
-cpdef binParticles(np.ndarray pixIndicies, long npix):
-    cdef long[:] pixIndicies_view = pixIndicies     
-
+cpdef binParticles(long[:] pixIndicies, long npix):
+       
     numcount = np.zeros(npix, dtype=np.int64)
     cdef long[:] numcount_view = numcount
 
     cdef int i
 
-    for i in range(0,pixIndicies_view.shape[0]):
-        numcount_view[pixIndicies_view[i]] +=1
+    for i in range(0,pixIndicies.shape[0]):
+        numcount_view[pixIndicies[i]] +=1
 
     return numcount
     
 #bin Velocities
 
-cpdef binVelocities(np.ndarray pixIndicies, np.ndarray velocity, long npix):
-    cdef long[:] pixIndicies_view = pixIndicies
+cpdef binVelocities(long[:] pixIndicies, double[:] velocity, long npix):
 
-    velMap = np.zeros(npix)
-    cdef double[:] velMap_view = velMap
+    #velMap = np.zeros(npix)
+    #cdef double[:] velMap_view = velMap
+
+    cdef double[:] velMap_view = np.zeros(npix)
 
     cdef int i
 
-    for i in range(0,pixIndicies_view.shape[0]):
-        velMap_view[pixIndicies_view[i]] +=velocity[i]
+    for i in range(0,pixIndicies.shape[0]):
+        velMap_view[pixIndicies[i]] +=velocity[i]
 
-    return velMap
+    return velMap_view
 
 #readSetToBins
 
