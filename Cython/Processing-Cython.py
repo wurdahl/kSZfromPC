@@ -15,7 +15,7 @@ from joblib import Parallel, delayed
 
 #import matplotlib.pyplot as plt
 import healpy as hp
-nside = 128
+nside = 1024
 npix = hp.nside2npix(nside)
 
 #%matplotlib inline
@@ -24,7 +24,7 @@ npix = hp.nside2npix(nside)
 # In[3]:
 
 
-rangeOfInterest=256#only look at particles within this
+rangeOfInterest=512#only look at particles within this
 radialDivs = 32
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
@@ -99,7 +99,7 @@ direc = "/home/urdahl/home/dockerFirst/Data/"
 inputFiles = os.listdir(direc)
 print("Found "+str(len(inputFiles))+" Files")
 
-import time
+#import time
 
 def readSetToBins(startFile, stopFile, index):
     tempArray = []
@@ -149,7 +149,7 @@ def readSetToBins(startFile, stopFile, index):
                 #do the math for the SZ effect
             
                 #sum all velocities in each bin together
-                beginVel = time.perf_counter()
+                #beginVel = time.perf_counter()
                 if(len(pixIndicies)>0):
                     #for k in np.unique(pixIndicies):
                     #    velInBin = radialRange[pixIndicies==k][:,3]
@@ -168,10 +168,10 @@ def readSetToBins(startFile, stopFile, index):
 # In[9]:
 
 num_Files = len(inputFiles)
-numProcess = num_Files
+numProcess = int(num_Files/4)
 ranges = np.linspace(0,num_Files,numProcess+1).astype(int)
 
-returnValues = Parallel(n_jobs=5)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=-1)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
