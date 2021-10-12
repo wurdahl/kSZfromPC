@@ -13,9 +13,9 @@ from joblib import Parallel, delayed
 # In[2]:
 
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import healpy as hp
-nside = 128
+nside = 1024
 npix = hp.nside2npix(nside)
 
 #%matplotlib inline
@@ -24,31 +24,20 @@ npix = hp.nside2npix(nside)
 # In[3]:
 
 
-rangeOfInterest=512 #only look at particles within this
-radialDivs = 8
+rangeOfInterest=256#only look at particles within this
+radialDivs = 32
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize=1024 # side length of box
-particleSize=128 #the total number of particles is n**3
+particleSize=768 #the total number of particles is n**3
 
-num_Files = 32
-
-run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)
+run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
 
 
 # In[4]:
-
-
-def getRadialUnitVecs(spherePos):
-    unitVecs = np.zeros((len(spherePos),3))
-    
-    #negative because you want it pointing towards the origin    
-    unitVecs[:,0] = np.multiply(np.cos(spherePos[:,2]),np.sin(spherePos[:,1]))
-    unitVecs[:,1] = np.multiply(np.sin(spherePos[:,2]),np.sin(spherePos[:,1]))
-    unitVecs[:,2] = np.cos(spherePos[:,1])
-    
-    return unitVecs
-
+#this can convert cartesian data into radial data
+#velocity still needs to be divided by angular diamter distance squared
+import ProcessingFunctions
 
 # In[5]:
 
@@ -76,45 +65,10 @@ getRedshift = interp1d(comovDist, redshifts)
 def getScalingFactor(comov_dist):
     return 1/(1+getRedshift(comov_dist))
 
-
-# In[6]:
-
-
-def convertToSpherical(xyz):
-    #variables
-    sphericalConversion = np.zeros((len(xyz),4))
-    vel = np.zeros((len(xyz),3))
-    
-    # col 0: r, col 1: theta, col 2: phi
-    
-    xySquared = xyz[:,0]**2 + xyz[:,1]**2
-    # r
-    sphericalConversion[:,0] = np.sqrt(xySquared+xyz[:,2]**2)
-    # theta - many options for this calc
-    
-    sphericalConversion[:,1] = np.arctan2(np.sqrt(xySquared), xyz[:,2])
-    
-    # phi
-    sphericalConversion[:,2] = np.arctan2(xyz[:,1],xyz[:,0])
-    
-    #convert velocity to radial velocity over radius^2
-    
-    angularDiameterDistanceSquared = np.power(getAngDiaDist(sphericalConversion[:,0]),2)
-        
-    vel[:,0] = xyz[:,3]/angularDiameterDistanceSquared
-    vel[:,1] = xyz[:,4]/angularDiameterDistanceSquared
-    vel[:,2] = xyz[:,5]/angularDiameterDistanceSquared
-    
-    unitVectors = getRadialUnitVecs(sphericalConversion)
-    
-    #get the radial 
-    for i in range(len(xyz)):
-        sphericalConversion[i,3] = np.dot(vel[i],unitVectors[i])
-    
-    return sphericalConversion
-
-
-# In[7]:
+del comovDist
+del angDiaDist
+del redshifts
+del LambdaCDM
 
 
 # Reading lp-cola unformatted files
@@ -141,62 +95,85 @@ def unf_read_file(file, p_list=[], np=6):
 
 # In[8]:
 
+direc = "/data/wurdahl/l-picola/output/"
+inputFiles = os.listdir(direc)
+print("Found "+str(len(inputFiles))+" Files")
+
+import time
 
 def readSetToBins(startFile, stopFile, index):
     tempArray = []
-    numcount = [None]*radialDivs
+    numcount = np.zeros((radialDivs,npix))
     totalVelThread = np.zeros((radialDivs,npix))
     for i in range(startFile,stopFile):
-        path = "Data/cone_test_lightcone."+str(i)
+        path = direc + inputFiles[i]
         if os.path.isfile(path):
+            #begin = time.perf_counter()
             unf_read_file(path, p_list=tempArray)
-
+            print("Reading file "+path)
             reshaped = np.reshape(tempArray,(-1,6))
+
             tempArray = []
-                                 
+            #fileTime = time.perf_counter()
+            #print("file done at "+str(fileTime-begin))
             offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
             
             reshaped = np.subtract(reshaped,offset)
-            
-            sphereConversion = convertToSpherical(reshaped)
-            
-            reshaped = []
-            
+            del offset
+            #timeOffset = time.perf_counter()
+            #print("offset done at "+str(timeOffset-begin))
+            sphereConversion = ProcessingFunctions.convertToSpherical(reshaped)
+            del reshaped
+            #reshaped = []
+
+            sphereConversion[:,3] = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
+            #timeConversion = time.perf_counter()
+            #print("Sphere Conversion done at " +str(timeConversion-begin))
             #bin points into the correct bins (radial, theta, phi bins)
             
-            for j in range(radialDivs):
+            for j in range(0,radialDivs):
                 #select all the point in each radial range
+                #beginSelect = time.perf_counter()
                 radialRange = sphereConversion[(sphereConversion[:,0]>ROIs[j]) & (sphereConversion[:,0]<ROIs[j+1])]
-                
+                #endSelect = time.perf_counter()
+                #print("it took "+str(endSelect-beginSelect)+"to select range")
                 #determine how many points are in each bin
                 pixIndicies = hp.ang2pix(nside,radialRange[:,1],radialRange[:,2])
                 
-                if numcount[j]==None:
-                    numcount[j] = np.bincount(pixIndicies, minlength=npix)
-                else:
-                    numcount[j] = np.add(numcount, np.bincount(pixIndicies, minlength=npix))
+                #if numcount[j]==None:
+                #    numcount[j] == np.zeros(npix)
+                #    numcount[j] = np.bincount(pixIndicies, minlength=npix)
+                #else:
+                numcount[j] = np.add(numcount[j], ProcessingFunctions.binParticles(pixIndicies, npix))
                 
                 #do the math for the SZ effect
             
                 #sum all velocities in each bin together
+                beginVel = time.perf_counter()
                 if(len(pixIndicies)>0):
-                    for k in np.unique(pixIndicies):
-                        velInBin = radialRange[pixIndicies==k][:,3]
-                        totalVelThread[j,k] = np.sum(velInBin,axis=0)
-            
-            
+                    #for k in np.unique(pixIndicies):
+                    #    velInBin = radialRange[pixIndicies==k][:,3]
+                    #    totalVelThread[j,k] = np.sum(velInBin,axis=0)
+                    totalVelThread[j,:] = ProcessingFunctions.binVelocities(pixIndicies,radialRange[:,3],npix)
+                #endVel = time.perf_counter()
+                #print("it took "+str(endVel-beginVel)+"to bin Vel")
+ 
+            #binTime = time.perf_counter()
+            #print("Binning done at "+str(binTime-begin))
             print(str(i)+" done")
-                
-        return [numcount, totalVelThread]
+   
+    return [numcount, totalVelThread]
 
 
 # In[9]:
 
-
-numProcess = 32
+num_Files = len(inputFiles)
+numProcess = num_Files
 ranges = np.linspace(0,num_Files,numProcess+1).astype(int)
 
-returnValues = Parallel(n_jobs=-1)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=-30)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+
+#big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
 print("Read all Files")
 
@@ -212,9 +189,15 @@ print("Read all Files")
 
 #combine the returns from each processor by summing the first axis
 
-outputCount = np.sum(np.array(returnValues)[0:numProcess,0],axis=0)
-outputkSZ = np.sum(np.array(returnValues)[0:numProcess,1],axis=0)
+#this can be a very memory intensive part:
 
+numpyReturn = np.array(returnValues)
+del returnValues
+
+outputCount = np.sum(numpyReturn[0:numProcess,0],axis=0)
+outputkSZ = np.sum(numpyReturn[0:numProcess,1],axis=0)
+
+del numpyReturn
 
 # In[11]:
 
@@ -288,7 +271,24 @@ hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", almosterkSZ, overwrite=True)
 #plt.hist(almosterkSZ,bins=np.linspace(-2*10**-6,2*10**-6));
 
 
-# In[17]:
+# In[24]:
+
+
+convergenceFactors = np.zeros((radialDivs,radialDivs));
+
+dr = rangeOfInterest/radialDivs
+
+#for each layer of the kSZ determine the accumalted convergence
+for kSZLayer in range(0,radialDivs):
+    #add up the convergence contribution of every intervening layer from 0 up to the current kSZ layer
+    for lensingLayer in range(0,kSZLayer):
+        kSZDist = (kSZLayer+0.5)*(dr)
+        lensingLayerDist = (lensingLayer+0.5)*(dr)
+        
+        convergenceFactors[kSZLayer,lensingLayer] = (1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
+
+
+# In[33]:
 
 
 #Now we determine the convergence maps
@@ -307,44 +307,40 @@ def getConvergenceForPixel(pixelIndex):
             lensingLayerDist = (lensingLayer+0.5)*(dr)
         
             convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
-            #simplification:
-            #convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(dr*getScalingFactor(lensingLayerDist)))*(kSZLayer-lensingLayer)/((0.5+kSZLayer)*(0.5+lensingLayer))
+            
     return convergencePixels
+
+def getConvergenceForPixelMat(pixelIndex):
+    return np.dot(convergenceFactors,outputCount[:,pixelIndex])
 
 def getConvergenceForRange(start, finish):
     convergences = np.zeros((finish-start,radialDivs))
     for pixel in range(start, finish):
-        convergences[pixel-start] = getConvergenceForPixel(pixel)
+        convergences[pixel-start] = getConvergenceForPixelMat(pixel)
     return convergences
 
 
-# In[18]:
+# In[34]:
 
 
 npix = hp.nside2npix(nside)
-
 numProcess = 64
-
 pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
-
 print("Starting to Calculate Convergences")
-
 convergenceReturn = Parallel(n_jobs=-1)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
-
 print("Calculated Convergences")
 
-#to each pixel:
-#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))
+#to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
 
 
-# In[19]:
+# In[35]:
 
 
 #to not get a ragged array, npix must be divisible by numProcess
 convergenceMaps = np.transpose(np.array(convergenceReturn).reshape((npix,radialDivs)))
 
 
-# In[20]:
+# In[36]:
 
 
 H0Squared = 1
@@ -354,7 +350,7 @@ prefactors = (3/2)*H0Squared*OmegaM
 convergenceMaps = prefactors*convergenceMaps
 
 
-# In[21]:
+# In[37]:
 
 
 #hp.mollview(np.sum(convergenceMaps,axis=0))
