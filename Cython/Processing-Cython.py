@@ -25,7 +25,7 @@ npix = hp.nside2npix(nside)
 
 
 rangeOfInterest=1024#only look at particles within this
-radialDivs = 64
+radialDivs = 8
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize=2048 # side length of box
@@ -101,75 +101,55 @@ print("Found "+str(len(inputFiles))+" Files")
 
 #import time
 
-def readSetToBins(startFile, stopFile, index):
+def readSetToBins(fileName, index):
     tempArray = []
-    numcount = np.zeros((radialDivs,npix))
-    totalVelThread = np.zeros((radialDivs,npix))
-    for i in range(startFile,stopFile):
-        path = direc + inputFiles[i]
-        if os.path.isfile(path):
-            #begin = time.perf_counter()
-            unf_read_file(path, p_list=tempArray)
-            print("Reading file "+path)
-            reshaped = np.reshape(tempArray,(-1,6))
+    path = direc + fileName
 
-            tempArray = []
-            #fileTime = time.perf_counter()
-            #print("file done at "+str(fileTime-begin))
-            offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
+    if os.path.isfile(path):
             
-            reshaped = np.subtract(reshaped,offset)
-            del offset
-            #timeOffset = time.perf_counter()
-            #print("offset done at "+str(timeOffset-begin))
-            sphereConversion = ProcessingFunctions.convertToSpherical(reshaped)
-            del reshaped
-            #reshaped = []
+        unf_read_file(path, p_list=tempArray)
+        print("Reading file "+path)
+        reshaped = np.reshape(tempArray,(-1,6))
+            
+        tempArray = []
+            
+        numParticles = reshaped.shape[0]
+            
+        #which radial bin each particle is in
+        partRadial =  np.zeros(numParticles)
 
-            sphereConversion[:,3] = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
-            #timeConversion = time.perf_counter()
-            #print("Sphere Conversion done at " +str(timeConversion-begin))
-            #bin points into the correct bins (radial, theta, phi bins)
+        offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
             
-            for j in range(0,radialDivs):
-                #select all the point in each radial range
-                #beginSelect = time.perf_counter()
-                radialRange = sphereConversion[(sphereConversion[:,0]>ROIs[j]) & (sphereConversion[:,0]<ROIs[j+1])]
-                #endSelect = time.perf_counter()
-                #print("it took "+str(endSelect-beginSelect)+"to select range")
-                #determine how many points are in each bin
-                pixIndicies = hp.ang2pix(nside,radialRange[:,1],radialRange[:,2])
-                
-                #if numcount[j]==None:
-                #    numcount[j] == np.zeros(npix)
-                #    numcount[j] = np.bincount(pixIndicies, minlength=npix)
-                #else:
-                numcount[j] = np.add(numcount[j], ProcessingFunctions.binParticles(pixIndicies, npix))
-                
-                #do the math for the SZ effect
+        reshaped = np.subtract(reshaped,offset)
+        del offset
             
-                #sum all velocities in each bin together
-                #beginVel = time.perf_counter()
-                if(len(pixIndicies)>0):
-                    numcount[j] = np.add(numcount[j], ProcessingFunctions.binParticles(pixIndicies, npix))
-                    totalVelThread[j] = np.add(totalVelThread[j], ProcessingFunctions.binVelocities(pixIndicies,radialRange[:,3],npix))
-                #endVel = time.perf_counter()
-                #print("it took "+str(endVel-beginVel)+"to bin Vel")
+        sphereConversion = ProcessingFunctions.convertToSpherical(reshaped)
+        del reshaped
+        #reshaped = []
+
+        partVelocity = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
+            
+                      
+        partIndex = hp.ang2pix(nside,sphereConversion[:,1],sphereConversion[:,2])
+
+        for j in range(0,radialDivs):
+            #set the values of the array to the correspodning radial bin
  
-            #binTime = time.perf_counter()
-            #print("Binning done at "+str(binTime-begin))
-            print(str(i)+" done")
+            partRadial[(sphereConversion[:,0]>ROIs[j]) & (sphereConversion[:,0]<ROIs[j+1])] = j
+
+        partRadial[(sphereConversion[:,0]>ROIs[j+1])] = -1
+                                          
+    print(str(index)+" done")
    
-    return [numcount, totalVelThread]
+    return [partIndex,partRadial, partVelocity]
 
 
 # In[9]:
 
 num_Files = len(inputFiles)
-numProcess = 10
-ranges = np.linspace(0,num_Files,numProcess+1).astype(int)
+numProcess = num_Files
 
-returnValues = Parallel(n_jobs=numProcess)(delayed(readSetToBins)(ranges[i],ranges[i+1], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=25)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
@@ -180,30 +160,42 @@ print("Read all Files")
 
 
 #structure of returnValues is weird
-#the first length is 32 corresponding to each process
-#the second length is 2 corresponding to the two arrays that were returned from each process: numcount, totalVelThread
-#the third length is number of radial divs
-#the fourth length corresponds to the number of pixels in each projection
+#the first length is the number of processes corresponding to each process
+#the second length is 3 corresponding to the three arrays that were returned from each process: numcount, totalVelThread
+#the third length is 
+#the fourth length is
 
 #combine the returns from each processor by summing the first axis
 
 #this can be a very memory intensive part:
 
-outputCount = np.zeros((radialDivs,npix))
-outputkSZ = np.zeros((radialDivs,npix))
+outputIndicies = returnValues[0][0]
+outputRadial = returnValues[0][1]
+outputVelocity = returnValues[0][2]
 
-for i in range(numProcess):
-    for j in range(1):
-        #the first return of each process is numcount
+for i in range(1,numProcess):
+    for j in range(3):
+        #the first return of each process is particleIndex
         if(j==0):
-            outputCount = np.add(outputCount,returnValues[i][j])
-        #the second return is totalVelThread
-        else:
-            outputkSZ = np.add(outputkSZ, returnValues[i][j])
+            outputIndicies = np.append(outputIndicies,returnValues[i][j])
+        #the second return is the radial index
+        if(j==1):
+            outputRadial = np.append(outputRadial,returnValues[i][j])
+        #the third return is the particle's radial Velocity
+        if(j==2):
+            outputVelocity = np.append(outputVelocity,returnValues[i][j])
 del returnValues
 
-# In[11]:
+print("Made numpy arrays and deleted return array")
 
+allMaps = ProcessingFunctions.binParticles(outputIndicies, outputRadial.astype(np.int64), outputVelocity, npix, radialDivs)
+
+print("Binnned particles into maps")
+
+outputCount = allMaps[0]
+outputkSZ = allMaps[1]
+
+del allMaps
 
 #combine the different radial divs for viewing
 numcount = np.sum(outputCount,axis=0)
