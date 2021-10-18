@@ -8,8 +8,9 @@ from libc.math cimport cos
 from libc.math cimport pow
 from libc.math cimport sqrt
 from libc.math cimport atan2
+from libc.math cimport isnan
 
-from libcpp cimport vector
+from cython.parallel import prange
 
 #getRadialUnitVecs
 cdef getRadialUnitVecs(double[:,:] spherePos): 
@@ -65,34 +66,23 @@ cpdef convertToSpherical(double[:,:] xyz):
 
 #bin Particles
 
-cpdef binParticles(long[:] pixIndicies, long npix):
+cpdef binParticles(long[:] partIndicies, long[:] partRadial, double[:] partVelocity, long npix, long radialBins):
        
-    numcount = np.zeros(npix, dtype=np.int64)
-    cdef long[:] numcount_view = numcount
-
-    cdef int i
-
-    for i in range(0,pixIndicies.shape[0]):
-        numcount_view[pixIndicies[i]] +=1
-
-    return numcount
+    densityFeild = np.zeros((radialBins, npix), dtype=np.int64)
+    velocityFeild = np.zeros((radialBins,npix),dtype=np.double)
     
-#bin Velocities
+    cdef long[:,:] densityFeild_view = densityFeild
+    cdef double[:,:] velocityFeild_view = velocityFeild
 
-cpdef binVelocities(long[:] pixIndicies, double[:] velocity, long npix):
+    cdef Py_ssize_t i
 
-    #velMap = np.zeros(npix)
-    #cdef double[:] velMap_view = velMap
+    for i in prange(partIndicies.shape[0],nogil=True):
+        if(partRadial[i]!=-1):
+            densityFeild_view[partRadial[i], partIndicies[i]] +=1
+            velocityFeild_view[partRadial[i], partIndicies[i]] += partVelocity[i]
 
-    cdef double[:] velMap_view = np.zeros(npix)
-
-    cdef int i
-
-    for i in range(0,pixIndicies.shape[0]):
-        velMap_view[pixIndicies[i]] +=velocity[i]
-
-    return velMap_view
-
+    return densityFeild, velocityFeild
+    
 #readSetToBins
 
 #getConvergenceForPixel
