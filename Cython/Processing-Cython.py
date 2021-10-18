@@ -25,7 +25,7 @@ npix = hp.nside2npix(nside)
 
 
 rangeOfInterest=1024#only look at particles within this
-radialDivs = 8
+radialDivs = 256
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize=2048 # side length of box
