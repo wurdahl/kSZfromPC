@@ -169,21 +169,29 @@ print("Read all Files")
 
 #this can be a very memory intensive part:
 
-outputIndicies = returnValues[0][0]
-outputRadial = returnValues[0][1]
-outputVelocity = returnValues[0][2]
+#make the longest list possible that can hold all of the particles
+outputIndicies = np.full((particleSize**3+3000),0)
+outputRadial = np.full((particleSize**3+3000),-1)
+outputVelocity = np.full((particleSize**3+3000),0.0,dtype=np.double)
 
-for i in range(1,numProcess):
-    for j in range(3):
-        #the first return of each process is particleIndex
-        if(j==0):
-            outputIndicies = np.append(outputIndicies,returnValues[i][j])
-        #the second return is the radial index
-        if(j==1):
-            outputRadial = np.append(outputRadial,returnValues[i][j])
-        #the third return is the particle's radial Velocity
-        if(j==2):
-            outputVelocity = np.append(outputVelocity,returnValues[i][j])
+#this is where each loop of the array should start writing to the array
+beginSec = 0
+
+for i in range(0,numProcess):
+    #this is the number of particles in each returned list
+    listParticles = returnValues[i][0].shape[0]
+    
+    #the first return of each process is particleIndex
+    
+    outputIndicies[beginSec:beginSec+listParticles] = returnValues[i][0]
+    
+    #the second return is the radial index
+    outputRadial[beginSec:beginSec+listParticles] = returnValues[i][1]
+
+    #the third return is the particle's radial Velocity
+    outputVelocity[beginSec:beginSec+listParticles] = returnValues[i][2]
+    
+    beginSec = beginSec + listParticles
 del returnValues
 
 print("Made numpy arrays and deleted return array")
