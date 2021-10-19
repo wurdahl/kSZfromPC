@@ -24,9 +24,9 @@ npix = hp.nside2npix(nside)
 # In[3]:
 
 
-rangeOfInterest=1024#only look at particles within this
+rangeOfInterest=1024 #only look at particles within this
 
-radialDivs = 256
+radialDivs = 64
 
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
@@ -200,6 +200,10 @@ print("Made numpy arrays and deleted return array")
 
 allMaps = ProcessingFunctions.binParticles(outputIndicies, outputRadial.astype(np.int64), outputVelocity, npix, radialDivs)
 
+del outputIndicies
+del outputRadial
+del outputVelocity
+
 print("Binnned particles into maps")
 
 outputCount = allMaps[0]
@@ -220,7 +224,7 @@ overdensity = (numcount-n_bar)/n_bar
 # In[12]:
 
 
-#hp.mollview(overdensity,xsize=3200,max=5)
+
 hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
 
 
