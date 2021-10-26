@@ -108,41 +108,41 @@ def readSetToBins(fileName, index):
     path = direc + fileName
 
     if os.path.isfile(path):
-            
+
         unf_read_file(path, p_list=tempArray)
         print("Reading file "+path)
         reshaped = np.reshape(tempArray,(-1,6))
-            
+
         tempArray = []
-            
+
         numParticles = reshaped.shape[0]
-            
+
         #which radial bin each particle is in
         partRadial =  np.zeros(numParticles)
 
         offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
-            
+
         reshaped = np.subtract(reshaped,offset)
         del offset
-            
+
         sphereConversion = ProcessingFunctions.convertToSpherical(reshaped)
         del reshaped
         #reshaped = []
 
         partVelocity = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
-            
-                      
+
+
         partIndex = hp.ang2pix(nside,sphereConversion[:,1],sphereConversion[:,2])
 
         for j in range(0,radialDivs):
             #set the values of the array to the correspodning radial bin
- 
+
             partRadial[(sphereConversion[:,0]>ROIs[j]) & (sphereConversion[:,0]<ROIs[j+1])] = j
 
         partRadial[(sphereConversion[:,0]>ROIs[j+1])] = -1
-                                          
+
     print(str(index)+" done")
-   
+
     return [partIndex,partRadial, partVelocity]
 
 
@@ -164,7 +164,7 @@ print("Read all Files")
 #structure of returnValues is weird
 #the first length is the number of processes corresponding to each process
 #the second length is 3 corresponding to the three arrays that were returned from each process: numcount, totalVelThread
-#the third length is 
+#the third length is
 #the fourth length is
 
 #combine the returns from each processor by summing the first axis
@@ -182,17 +182,17 @@ beginSec = 0
 for i in range(0,numProcess):
     #this is the number of particles in each returned list
     listParticles = returnValues[i][0].shape[0]
-    
+
     #the first return of each process is particleIndex
-    
+
     outputIndicies[beginSec:beginSec+listParticles] = returnValues[i][0]
-    
+
     #the second return is the radial index
     outputRadial[beginSec:beginSec+listParticles] = returnValues[i][1]
 
     #the third return is the particle's radial Velocity
     outputVelocity[beginSec:beginSec+listParticles] = returnValues[i][2]
-    
+
     beginSec = beginSec + listParticles
 del returnValues
 
@@ -274,15 +274,6 @@ almosterkSZ = -(sigmaT*fb*mu)*(correctUnits/(c*hp.nside2resol(nside)**2))
 hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", almosterkSZ, overwrite=True)
 
 
-# In[16]:
-
-
-#plt.hist(almosterkSZ,bins=np.linspace(-2*10**-6,2*10**-6));
-
-
-# In[24]:
-
-
 convergenceFactors = np.zeros((radialDivs,radialDivs));
 
 dr = rangeOfInterest/radialDivs
@@ -293,7 +284,7 @@ for kSZLayer in range(0,radialDivs):
     for lensingLayer in range(0,kSZLayer):
         kSZDist = (kSZLayer+0.5)*(dr)
         lensingLayerDist = (lensingLayer+0.5)*(dr)
-        
+
         convergenceFactors[kSZLayer,lensingLayer] = (1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
 
 
@@ -314,9 +305,9 @@ def getConvergenceForPixel(pixelIndex):
         for lensingLayer in range(0,kSZLayer):
             kSZDist = (kSZLayer+0.5)*(dr)
             lensingLayerDist = (lensingLayer+0.5)*(dr)
-        
+
             convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
-            
+
     return convergencePixels
 
 def getConvergenceForPixelMat(pixelIndex):
@@ -352,9 +343,9 @@ convergenceMaps = np.transpose(np.array(convergenceReturn).reshape((npix,radialD
 # In[36]:
 
 
-H0Squared = 1
+H0Squared = (H/c)**2
 
-prefactors = (3/2)*H0Squared*OmegaM
+prefactors = (3/2)*H0Squared*OmegaM*((unitLength*boxSize)**3)/(particleSize**3*hp.pixelfunc.nside2pixarea(nside))
 
 convergenceMaps = prefactors*convergenceMaps
 
@@ -367,7 +358,3 @@ hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[radi
 
 
 # In[ ]:
-
-
-
-
