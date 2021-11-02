@@ -266,12 +266,12 @@ mu = (1-YHe)/mH+YHe/mHe
 sigmaT = 6.6524*(10**-25) #cm^2
 
 #convert l-picola units to SI units
-correctUnits = almostkSZ*(unitMass*unitVelocity/unitLength**2)
+correctUnits = outputkSZ*(unitMass*unitVelocity/unitLength**2)
 #summation is now in (g/s)
 
 almosterkSZ = -(sigmaT*fb*mu)*(correctUnits/(c*hp.nside2resol(nside)**2))
 #hp.mollview(almosterkSZ,xsize=3200,min=-2*10**-6,max=2*10**-6)
-hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", almosterkSZ, overwrite=True)
+hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", almosterkSZ[-1], overwrite=True)
 
 
 convergenceFactors = np.zeros((radialDivs,radialDivs));
@@ -342,6 +342,8 @@ convergenceMaps = np.transpose(np.array(convergenceReturn).reshape((npix,radialD
 
 # In[36]:
 
+H = 72.1*10**3
+c=2.998*10**8
 
 H0Squared = (H/c)**2
 
@@ -357,4 +359,27 @@ convergenceMaps = prefactors*convergenceMaps
 hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[radialDivs-1], overwrite=True)
 
 
-# In[ ]:
+#lens the kSZ
+
+lmax=hp.Alm.getlmax(len(kalms))
+ls, ms = hp.Alm.getlm(lmax)
+lFactor = -ls*(ls+1)
+
+baseAngle = hp.pixelfunc.pix2ang(nside, np.arange(0,npix))
+
+lensedkSZ = np.zeros(npix)
+
+for i in range(1,radialDivs):
+    kalms=hp.sphtfunc.map2alm(convergenceMaps[i])
+    
+    lensPotential = kalms/(lFactor)
+    lensPotential[0]=0+0j
+    
+    divLensPot = hp.alm2map_der1(lensPotential,nside)
+    
+    deflectedTheta = baseAngle[0]+divLensPot[1]
+    deflectedPhi = baseAngle[1]+divLensPot[2]
+    
+    lensedkSZ = lensedkSZ + hp.pixelfunc.get_interp_val(almosterkSZ[i],deflectedTheta,deflectedPhi)
+
+hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
