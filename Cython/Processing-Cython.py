@@ -361,6 +361,8 @@ hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[radi
 
 #lens the kSZ
 
+kalms=hp.sphtfunc.map2alm(convergenceMaps[-1])
+
 lmax=hp.Alm.getlmax(len(kalms))
 ls, ms = hp.Alm.getlm(lmax)
 lFactor = -ls*(ls+1)
@@ -371,15 +373,15 @@ lensedkSZ = np.zeros(npix)
 
 for i in range(1,radialDivs):
     kalms=hp.sphtfunc.map2alm(convergenceMaps[i])
-    
+
     lensPotential = kalms/(lFactor)
     lensPotential[0]=0+0j
-    
+
     divLensPot = hp.alm2map_der1(lensPotential,nside)
-    
+
     deflectedTheta = baseAngle[0]+divLensPot[1]
     deflectedPhi = baseAngle[1]+divLensPot[2]
-    
+
     lensedkSZ = lensedkSZ + hp.pixelfunc.get_interp_val(almosterkSZ[i],deflectedTheta,deflectedPhi)
 
 hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
