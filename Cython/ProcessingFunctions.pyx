@@ -83,8 +83,14 @@ cpdef binParticles(long[:] partIndicies, long[:] partRadial, double[:] partVeloc
 
     return densityFeild, velocityFeild
     
-#readSetToBins
-
 #getConvergenceForPixel
-
+cdef getConvergenceForPixelMat(long pixelIndex, double[:,:] convergenceFactors, double[:,:] outputCount):
+    return np.dot(convergenceFactors,outputCount[:,pixelIndex])
 #getConvergenceForRange
+
+cpdef getConvergenceForRange(long start, long finish, double[:,:] convergenceFactors, double[:,:] outputCount, long radialDivs):
+    convergences = np.zeros((finish-start,radialDivs))
+    for pixel in range(start, finish):
+        convergences[pixel-start] = getConvergenceForPixelMat(pixel, convergenceFactors, outputCount)
+    return convergences
+

@@ -1989,6 +1989,10 @@ static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_ds_dou
 /* ObjectToMemviewSlice.proto */
 static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_dsds_long(PyObject *, int writable_flag);
 
+/* MemviewDtypeToObject.proto */
+static CYTHON_INLINE PyObject *__pyx_memview_get_double(const char *itemp);
+static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *obj);
+
 /* RealImag.proto */
 #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
@@ -2171,6 +2175,8 @@ static PyThread_type_lock __pyx_memoryview_thread_locks[8];
 static PyObject *__pyx_f_19ProcessingFunctions_getRadialUnitVecs(__Pyx_memviewslice); /*proto*/
 static PyObject *__pyx_f_19ProcessingFunctions_convertToSpherical(__Pyx_memviewslice, int __pyx_skip_dispatch); /*proto*/
 static PyObject *__pyx_f_19ProcessingFunctions_binParticles(__Pyx_memviewslice, __Pyx_memviewslice, __Pyx_memviewslice, long, long, int __pyx_skip_dispatch); /*proto*/
+static PyObject *__pyx_f_19ProcessingFunctions_getConvergenceForPixelMat(long, __Pyx_memviewslice, __Pyx_memviewslice); /*proto*/
+static PyObject *__pyx_f_19ProcessingFunctions_getConvergenceForRange(long, long, __Pyx_memviewslice, __Pyx_memviewslice, long, int __pyx_skip_dispatch); /*proto*/
 static struct __pyx_array_obj *__pyx_array_new(PyObject *, Py_ssize_t, char *, char *, char *); /*proto*/
 static void *__pyx_align_pointer(void *, size_t); /*proto*/
 static PyObject *__pyx_memoryview_new(PyObject *, int, int, __Pyx_TypeInfo *); /*proto*/
@@ -2224,6 +2230,7 @@ static const char __pyx_k_O[] = "O";
 static const char __pyx_k_c[] = "c";
 static const char __pyx_k_id[] = "id";
 static const char __pyx_k_np[] = "np";
+static const char __pyx_k_dot[] = "dot";
 static const char __pyx_k_new[] = "__new__";
 static const char __pyx_k_obj[] = "obj";
 static const char __pyx_k_base[] = "base";
@@ -2251,6 +2258,7 @@ static const char __pyx_k_start[] = "start";
 static const char __pyx_k_zeros[] = "zeros";
 static const char __pyx_k_double[] = "double";
 static const char __pyx_k_encode[] = "encode";
+static const char __pyx_k_finish[] = "finish";
 static const char __pyx_k_format[] = "format";
 static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_name_2[] = "__name__";
@@ -2276,9 +2284,11 @@ static const char __pyx_k_partRadial[] = "partRadial";
 static const char __pyx_k_pyx_result[] = "__pyx_result";
 static const char __pyx_k_pyx_vtable[] = "__pyx_vtable__";
 static const char __pyx_k_radialBins[] = "radialBins";
+static const char __pyx_k_radialDivs[] = "radialDivs";
 static const char __pyx_k_ImportError[] = "ImportError";
 static const char __pyx_k_MemoryError[] = "MemoryError";
 static const char __pyx_k_PickleError[] = "PickleError";
+static const char __pyx_k_outputCount[] = "outputCount";
 static const char __pyx_k_partIndicies[] = "partIndicies";
 static const char __pyx_k_partVelocity[] = "partVelocity";
 static const char __pyx_k_pyx_checksum[] = "__pyx_checksum";
@@ -2292,6 +2302,7 @@ static const char __pyx_k_pyx_PickleError[] = "__pyx_PickleError";
 static const char __pyx_k_setstate_cython[] = "__setstate_cython__";
 static const char __pyx_k_pyx_unpickle_Enum[] = "__pyx_unpickle_Enum";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
+static const char __pyx_k_convergenceFactors[] = "convergenceFactors";
 static const char __pyx_k_strided_and_direct[] = "<strided and direct>";
 static const char __pyx_k_strided_and_indirect[] = "<strided and indirect>";
 static const char __pyx_k_contiguous_and_direct[] = "<contiguous and direct>";
@@ -2350,13 +2361,16 @@ static PyObject *__pyx_n_s_class;
 static PyObject *__pyx_n_s_cline_in_traceback;
 static PyObject *__pyx_kp_s_contiguous_and_direct;
 static PyObject *__pyx_kp_s_contiguous_and_indirect;
+static PyObject *__pyx_n_s_convergenceFactors;
 static PyObject *__pyx_n_s_dict;
+static PyObject *__pyx_n_s_dot;
 static PyObject *__pyx_n_s_double;
 static PyObject *__pyx_n_s_dtype;
 static PyObject *__pyx_n_s_dtype_is_object;
 static PyObject *__pyx_n_s_encode;
 static PyObject *__pyx_n_s_enumerate;
 static PyObject *__pyx_n_s_error;
+static PyObject *__pyx_n_s_finish;
 static PyObject *__pyx_n_s_flags;
 static PyObject *__pyx_n_s_format;
 static PyObject *__pyx_n_s_fortran;
@@ -2382,6 +2396,7 @@ static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_kp_s_numpy_core_multiarray_failed_to;
 static PyObject *__pyx_kp_s_numpy_core_umath_failed_to_impor;
 static PyObject *__pyx_n_s_obj;
+static PyObject *__pyx_n_s_outputCount;
 static PyObject *__pyx_n_s_pack;
 static PyObject *__pyx_n_s_partIndicies;
 static PyObject *__pyx_n_s_partRadial;
@@ -2396,6 +2411,7 @@ static PyObject *__pyx_n_s_pyx_type;
 static PyObject *__pyx_n_s_pyx_unpickle_Enum;
 static PyObject *__pyx_n_s_pyx_vtable;
 static PyObject *__pyx_n_s_radialBins;
+static PyObject *__pyx_n_s_radialDivs;
 static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_reduce;
 static PyObject *__pyx_n_s_reduce_cython;
@@ -2420,6 +2436,7 @@ static PyObject *__pyx_n_s_update;
 static PyObject *__pyx_n_s_zeros;
 static PyObject *__pyx_pf_19ProcessingFunctions_convertToSpherical(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_xyz); /* proto */
 static PyObject *__pyx_pf_19ProcessingFunctions_2binParticles(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_partIndicies, __Pyx_memviewslice __pyx_v_partRadial, __Pyx_memviewslice __pyx_v_partVelocity, long __pyx_v_npix, long __pyx_v_radialBins); /* proto */
+static PyObject *__pyx_pf_19ProcessingFunctions_4getConvergenceForRange(CYTHON_UNUSED PyObject *__pyx_self, long __pyx_v_start, long __pyx_v_finish, __Pyx_memviewslice __pyx_v_convergenceFactors, __Pyx_memviewslice __pyx_v_outputCount, long __pyx_v_radialDivs); /* proto */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __pyx_array_obj *__pyx_v_self, PyObject *__pyx_v_shape, Py_ssize_t __pyx_v_itemsize, PyObject *__pyx_v_format, PyObject *__pyx_v_mode, int __pyx_v_allocate_buffer); /* proto */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array_2__getbuffer__(struct __pyx_array_obj *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_array___pyx_pf_15View_dot_MemoryView_5array_4__dealloc__(struct __pyx_array_obj *__pyx_v_self); /* proto */
@@ -3768,7 +3785,7 @@ static PyObject *__pyx_f_19ProcessingFunctions_binParticles(__Pyx_memviewslice _
  * 
  *     return densityFeild, velocityFeild             # <<<<<<<<<<<<<<
  * 
- * #readSetToBins
+ * #getConvergenceForPixel
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
@@ -3936,6 +3953,476 @@ static PyObject *__pyx_pf_19ProcessingFunctions_2binParticles(CYTHON_UNUSED PyOb
   __PYX_XDEC_MEMVIEW(&__pyx_v_partIndicies, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_partRadial, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_partVelocity, 1);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "ProcessingFunctions.pyx":87
+ * 
+ * #getConvergenceForPixel
+ * cdef getConvergenceForPixelMat(long pixelIndex, double[:,:] convergenceFactors, double[:,:] outputCount):             # <<<<<<<<<<<<<<
+ *     return np.dot(convergenceFactors,outputCount[:,pixelIndex])
+ * #getConvergenceForRange
+ */
+
+static PyObject *__pyx_f_19ProcessingFunctions_getConvergenceForPixelMat(long __pyx_v_pixelIndex, __Pyx_memviewslice __pyx_v_convergenceFactors, __Pyx_memviewslice __pyx_v_outputCount) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  __Pyx_memviewslice __pyx_t_4 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  PyObject *__pyx_t_5 = NULL;
+  PyObject *__pyx_t_6 = NULL;
+  int __pyx_t_7;
+  PyObject *__pyx_t_8 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("getConvergenceForPixelMat", 0);
+
+  /* "ProcessingFunctions.pyx":88
+ * #getConvergenceForPixel
+ * cdef getConvergenceForPixelMat(long pixelIndex, double[:,:] convergenceFactors, double[:,:] outputCount):
+ *     return np.dot(convergenceFactors,outputCount[:,pixelIndex])             # <<<<<<<<<<<<<<
+ * #getConvergenceForRange
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_dot); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_v_convergenceFactors, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_4.data = __pyx_v_outputCount.data;
+  __pyx_t_4.memview = __pyx_v_outputCount.memview;
+  __PYX_INC_MEMVIEW(&__pyx_t_4, 0);
+  __pyx_t_4.shape[0] = __pyx_v_outputCount.shape[0];
+__pyx_t_4.strides[0] = __pyx_v_outputCount.strides[0];
+    __pyx_t_4.suboffsets[0] = -1;
+
+{
+    Py_ssize_t __pyx_tmp_idx = __pyx_v_pixelIndex;
+        Py_ssize_t __pyx_tmp_shape = __pyx_v_outputCount.shape[1];
+    Py_ssize_t __pyx_tmp_stride = __pyx_v_outputCount.strides[1];
+        if (__pyx_tmp_idx < 0)
+            __pyx_tmp_idx += __pyx_tmp_shape;
+        if (unlikely(!__Pyx_is_valid_index(__pyx_tmp_idx, __pyx_tmp_shape))) {
+            PyErr_SetString(PyExc_IndexError,
+                            "Index out of bounds (axis 1)");
+            __PYX_ERR(0, 88, __pyx_L1_error)
+        }
+        __pyx_t_4.data += __pyx_tmp_idx * __pyx_tmp_stride;
+}
+
+__pyx_t_5 = __pyx_memoryview_fromslice(__pyx_t_4, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_4, 1);
+  __pyx_t_4.memview = NULL;
+  __pyx_t_4.data = NULL;
+  __pyx_t_6 = NULL;
+  __pyx_t_7 = 0;
+  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
+    __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_3);
+    if (likely(__pyx_t_6)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+      __Pyx_INCREF(__pyx_t_6);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_3, function);
+      __pyx_t_7 = 1;
+    }
+  }
+  #if CYTHON_FAST_PYCALL
+  if (PyFunction_Check(__pyx_t_3)) {
+    PyObject *__pyx_temp[3] = {__pyx_t_6, __pyx_t_2, __pyx_t_5};
+    __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  } else
+  #endif
+  #if CYTHON_FAST_PYCCALL
+  if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
+    PyObject *__pyx_temp[3] = {__pyx_t_6, __pyx_t_2, __pyx_t_5};
+    __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  } else
+  #endif
+  {
+    __pyx_t_8 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_8);
+    if (__pyx_t_6) {
+      __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
+    }
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_8, 0+__pyx_t_7, __pyx_t_2);
+    __Pyx_GIVEREF(__pyx_t_5);
+    PyTuple_SET_ITEM(__pyx_t_8, 1+__pyx_t_7, __pyx_t_5);
+    __pyx_t_2 = 0;
+    __pyx_t_5 = 0;
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+  }
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "ProcessingFunctions.pyx":87
+ * 
+ * #getConvergenceForPixel
+ * cdef getConvergenceForPixelMat(long pixelIndex, double[:,:] convergenceFactors, double[:,:] outputCount):             # <<<<<<<<<<<<<<
+ *     return np.dot(convergenceFactors,outputCount[:,pixelIndex])
+ * #getConvergenceForRange
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_4, 1);
+  __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_XDECREF(__pyx_t_6);
+  __Pyx_XDECREF(__pyx_t_8);
+  __Pyx_AddTraceback("ProcessingFunctions.getConvergenceForPixelMat", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = 0;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "ProcessingFunctions.pyx":91
+ * #getConvergenceForRange
+ * 
+ * cpdef getConvergenceForRange(long start, long finish, double[:,:] convergenceFactors, double[:,:] outputCount, long radialDivs):             # <<<<<<<<<<<<<<
+ *     convergences = np.zeros((finish-start,radialDivs))
+ *     for pixel in range(start, finish):
+ */
+
+static PyObject *__pyx_pw_19ProcessingFunctions_5getConvergenceForRange(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static PyObject *__pyx_f_19ProcessingFunctions_getConvergenceForRange(long __pyx_v_start, long __pyx_v_finish, __Pyx_memviewslice __pyx_v_convergenceFactors, __Pyx_memviewslice __pyx_v_outputCount, long __pyx_v_radialDivs, CYTHON_UNUSED int __pyx_skip_dispatch) {
+  PyObject *__pyx_v_convergences = NULL;
+  PyObject *__pyx_v_pixel = NULL;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  PyObject *__pyx_t_4 = NULL;
+  PyObject *__pyx_t_5 = NULL;
+  Py_ssize_t __pyx_t_6;
+  PyObject *(*__pyx_t_7)(PyObject *);
+  long __pyx_t_8;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("getConvergenceForRange", 0);
+
+  /* "ProcessingFunctions.pyx":92
+ * 
+ * cpdef getConvergenceForRange(long start, long finish, double[:,:] convergenceFactors, double[:,:] outputCount, long radialDivs):
+ *     convergences = np.zeros((finish-start,radialDivs))             # <<<<<<<<<<<<<<
+ *     for pixel in range(start, finish):
+ *         convergences[pixel-start] = getConvergenceForPixelMat(pixel, convergenceFactors, outputCount)
+ */
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_zeros); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __pyx_t_2 = __Pyx_PyInt_From_long((__pyx_v_finish - __pyx_v_start)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_4 = __Pyx_PyInt_From_long(__pyx_v_radialDivs); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_GIVEREF(__pyx_t_2);
+  PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+  __Pyx_GIVEREF(__pyx_t_4);
+  PyTuple_SET_ITEM(__pyx_t_5, 1, __pyx_t_4);
+  __pyx_t_2 = 0;
+  __pyx_t_4 = 0;
+  __pyx_t_4 = NULL;
+  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
+    __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
+    if (likely(__pyx_t_4)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+      __Pyx_INCREF(__pyx_t_4);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_3, function);
+    }
+  }
+  __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_t_5) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_5);
+  __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 92, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_v_convergences = __pyx_t_1;
+  __pyx_t_1 = 0;
+
+  /* "ProcessingFunctions.pyx":93
+ * cpdef getConvergenceForRange(long start, long finish, double[:,:] convergenceFactors, double[:,:] outputCount, long radialDivs):
+ *     convergences = np.zeros((finish-start,radialDivs))
+ *     for pixel in range(start, finish):             # <<<<<<<<<<<<<<
+ *         convergences[pixel-start] = getConvergenceForPixelMat(pixel, convergenceFactors, outputCount)
+ *     return convergences
+ */
+  __pyx_t_1 = __Pyx_PyInt_From_long(__pyx_v_start); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_PyInt_From_long(__pyx_v_finish); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_GIVEREF(__pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_3);
+  PyTuple_SET_ITEM(__pyx_t_5, 1, __pyx_t_3);
+  __pyx_t_1 = 0;
+  __pyx_t_3 = 0;
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_range, __pyx_t_5, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  if (likely(PyList_CheckExact(__pyx_t_3)) || PyTuple_CheckExact(__pyx_t_3)) {
+    __pyx_t_5 = __pyx_t_3; __Pyx_INCREF(__pyx_t_5); __pyx_t_6 = 0;
+    __pyx_t_7 = NULL;
+  } else {
+    __pyx_t_6 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 93, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __pyx_t_7 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 93, __pyx_L1_error)
+  }
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  for (;;) {
+    if (likely(!__pyx_t_7)) {
+      if (likely(PyList_CheckExact(__pyx_t_5))) {
+        if (__pyx_t_6 >= PyList_GET_SIZE(__pyx_t_5)) break;
+        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+        __pyx_t_3 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_6); __Pyx_INCREF(__pyx_t_3); __pyx_t_6++; if (unlikely(0 < 0)) __PYX_ERR(0, 93, __pyx_L1_error)
+        #else
+        __pyx_t_3 = PySequence_ITEM(__pyx_t_5, __pyx_t_6); __pyx_t_6++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 93, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        #endif
+      } else {
+        if (__pyx_t_6 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
+        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+        __pyx_t_3 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_6); __Pyx_INCREF(__pyx_t_3); __pyx_t_6++; if (unlikely(0 < 0)) __PYX_ERR(0, 93, __pyx_L1_error)
+        #else
+        __pyx_t_3 = PySequence_ITEM(__pyx_t_5, __pyx_t_6); __pyx_t_6++; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 93, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        #endif
+      }
+    } else {
+      __pyx_t_3 = __pyx_t_7(__pyx_t_5);
+      if (unlikely(!__pyx_t_3)) {
+        PyObject* exc_type = PyErr_Occurred();
+        if (exc_type) {
+          if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
+          else __PYX_ERR(0, 93, __pyx_L1_error)
+        }
+        break;
+      }
+      __Pyx_GOTREF(__pyx_t_3);
+    }
+    __Pyx_XDECREF_SET(__pyx_v_pixel, __pyx_t_3);
+    __pyx_t_3 = 0;
+
+    /* "ProcessingFunctions.pyx":94
+ *     convergences = np.zeros((finish-start,radialDivs))
+ *     for pixel in range(start, finish):
+ *         convergences[pixel-start] = getConvergenceForPixelMat(pixel, convergenceFactors, outputCount)             # <<<<<<<<<<<<<<
+ *     return convergences
+ * 
+ */
+    __pyx_t_8 = __Pyx_PyInt_As_long(__pyx_v_pixel); if (unlikely((__pyx_t_8 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 94, __pyx_L1_error)
+    __pyx_t_3 = __pyx_f_19ProcessingFunctions_getConvergenceForPixelMat(__pyx_t_8, __pyx_v_convergenceFactors, __pyx_v_outputCount); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 94, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_1 = __Pyx_PyInt_From_long(__pyx_v_start); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 94, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_4 = PyNumber_Subtract(__pyx_v_pixel, __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 94, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    if (unlikely(PyObject_SetItem(__pyx_v_convergences, __pyx_t_4, __pyx_t_3) < 0)) __PYX_ERR(0, 94, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+
+    /* "ProcessingFunctions.pyx":93
+ * cpdef getConvergenceForRange(long start, long finish, double[:,:] convergenceFactors, double[:,:] outputCount, long radialDivs):
+ *     convergences = np.zeros((finish-start,radialDivs))
+ *     for pixel in range(start, finish):             # <<<<<<<<<<<<<<
+ *         convergences[pixel-start] = getConvergenceForPixelMat(pixel, convergenceFactors, outputCount)
+ *     return convergences
+ */
+  }
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+  /* "ProcessingFunctions.pyx":95
+ *     for pixel in range(start, finish):
+ *         convergences[pixel-start] = getConvergenceForPixelMat(pixel, convergenceFactors, outputCount)
+ *     return convergences             # <<<<<<<<<<<<<<
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_v_convergences);
+  __pyx_r = __pyx_v_convergences;
+  goto __pyx_L0;
+
+  /* "ProcessingFunctions.pyx":91
+ * #getConvergenceForRange
+ * 
+ * cpdef getConvergenceForRange(long start, long finish, double[:,:] convergenceFactors, double[:,:] outputCount, long radialDivs):             # <<<<<<<<<<<<<<
+ *     convergences = np.zeros((finish-start,radialDivs))
+ *     for pixel in range(start, finish):
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_AddTraceback("ProcessingFunctions.getConvergenceForRange", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = 0;
+  __pyx_L0:;
+  __Pyx_XDECREF(__pyx_v_convergences);
+  __Pyx_XDECREF(__pyx_v_pixel);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static PyObject *__pyx_pw_19ProcessingFunctions_5getConvergenceForRange(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static PyObject *__pyx_pw_19ProcessingFunctions_5getConvergenceForRange(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  long __pyx_v_start;
+  long __pyx_v_finish;
+  __Pyx_memviewslice __pyx_v_convergenceFactors = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_outputCount = { 0, 0, { 0 }, { 0 }, { 0 } };
+  long __pyx_v_radialDivs;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("getConvergenceForRange (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_start,&__pyx_n_s_finish,&__pyx_n_s_convergenceFactors,&__pyx_n_s_outputCount,&__pyx_n_s_radialDivs,0};
+    PyObject* values[5] = {0,0,0,0,0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+        CYTHON_FALLTHROUGH;
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        CYTHON_FALLTHROUGH;
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        CYTHON_FALLTHROUGH;
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        CYTHON_FALLTHROUGH;
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        CYTHON_FALLTHROUGH;
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_start)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+        CYTHON_FALLTHROUGH;
+        case  1:
+        if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_finish)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("getConvergenceForRange", 1, 5, 5, 1); __PYX_ERR(0, 91, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  2:
+        if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_convergenceFactors)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("getConvergenceForRange", 1, 5, 5, 2); __PYX_ERR(0, 91, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  3:
+        if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_outputCount)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("getConvergenceForRange", 1, 5, 5, 3); __PYX_ERR(0, 91, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  4:
+        if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_radialDivs)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("getConvergenceForRange", 1, 5, 5, 4); __PYX_ERR(0, 91, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "getConvergenceForRange") < 0)) __PYX_ERR(0, 91, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 5) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+      values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+    }
+    __pyx_v_start = __Pyx_PyInt_As_long(values[0]); if (unlikely((__pyx_v_start == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 91, __pyx_L3_error)
+    __pyx_v_finish = __Pyx_PyInt_As_long(values[1]); if (unlikely((__pyx_v_finish == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 91, __pyx_L3_error)
+    __pyx_v_convergenceFactors = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_convergenceFactors.memview)) __PYX_ERR(0, 91, __pyx_L3_error)
+    __pyx_v_outputCount = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[3], PyBUF_WRITABLE); if (unlikely(!__pyx_v_outputCount.memview)) __PYX_ERR(0, 91, __pyx_L3_error)
+    __pyx_v_radialDivs = __Pyx_PyInt_As_long(values[4]); if (unlikely((__pyx_v_radialDivs == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 91, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("getConvergenceForRange", 1, 5, 5, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 91, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("ProcessingFunctions.getConvergenceForRange", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_19ProcessingFunctions_4getConvergenceForRange(__pyx_self, __pyx_v_start, __pyx_v_finish, __pyx_v_convergenceFactors, __pyx_v_outputCount, __pyx_v_radialDivs);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_19ProcessingFunctions_4getConvergenceForRange(CYTHON_UNUSED PyObject *__pyx_self, long __pyx_v_start, long __pyx_v_finish, __Pyx_memviewslice __pyx_v_convergenceFactors, __Pyx_memviewslice __pyx_v_outputCount, long __pyx_v_radialDivs) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("getConvergenceForRange", 0);
+  __Pyx_XDECREF(__pyx_r);
+  if (unlikely(!__pyx_v_convergenceFactors.memview)) { __Pyx_RaiseUnboundLocalError("convergenceFactors"); __PYX_ERR(0, 91, __pyx_L1_error) }
+  if (unlikely(!__pyx_v_outputCount.memview)) { __Pyx_RaiseUnboundLocalError("outputCount"); __PYX_ERR(0, 91, __pyx_L1_error) }
+  __pyx_t_1 = __pyx_f_19ProcessingFunctions_getConvergenceForRange(__pyx_v_start, __pyx_v_finish, __pyx_v_convergenceFactors, __pyx_v_outputCount, __pyx_v_radialDivs, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 91, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("ProcessingFunctions.getConvergenceForRange", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __PYX_XDEC_MEMVIEW(&__pyx_v_convergenceFactors, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_outputCount, 1);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
@@ -18520,6 +19007,7 @@ static PyTypeObject __pyx_type___pyx_memoryviewslice = {
 static PyMethodDef __pyx_methods[] = {
   {"convertToSpherical", (PyCFunction)__pyx_pw_19ProcessingFunctions_1convertToSpherical, METH_O, 0},
   {"binParticles", (PyCFunction)(void*)(PyCFunctionWithKeywords)__pyx_pw_19ProcessingFunctions_3binParticles, METH_VARARGS|METH_KEYWORDS, 0},
+  {"getConvergenceForRange", (PyCFunction)(void*)(PyCFunctionWithKeywords)__pyx_pw_19ProcessingFunctions_5getConvergenceForRange, METH_VARARGS|METH_KEYWORDS, 0},
   {0, 0, 0, 0}
 };
 
@@ -18597,13 +19085,16 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
   {&__pyx_kp_s_contiguous_and_direct, __pyx_k_contiguous_and_direct, sizeof(__pyx_k_contiguous_and_direct), 0, 0, 1, 0},
   {&__pyx_kp_s_contiguous_and_indirect, __pyx_k_contiguous_and_indirect, sizeof(__pyx_k_contiguous_and_indirect), 0, 0, 1, 0},
+  {&__pyx_n_s_convergenceFactors, __pyx_k_convergenceFactors, sizeof(__pyx_k_convergenceFactors), 0, 0, 1, 1},
   {&__pyx_n_s_dict, __pyx_k_dict, sizeof(__pyx_k_dict), 0, 0, 1, 1},
+  {&__pyx_n_s_dot, __pyx_k_dot, sizeof(__pyx_k_dot), 0, 0, 1, 1},
   {&__pyx_n_s_double, __pyx_k_double, sizeof(__pyx_k_double), 0, 0, 1, 1},
   {&__pyx_n_s_dtype, __pyx_k_dtype, sizeof(__pyx_k_dtype), 0, 0, 1, 1},
   {&__pyx_n_s_dtype_is_object, __pyx_k_dtype_is_object, sizeof(__pyx_k_dtype_is_object), 0, 0, 1, 1},
   {&__pyx_n_s_encode, __pyx_k_encode, sizeof(__pyx_k_encode), 0, 0, 1, 1},
   {&__pyx_n_s_enumerate, __pyx_k_enumerate, sizeof(__pyx_k_enumerate), 0, 0, 1, 1},
   {&__pyx_n_s_error, __pyx_k_error, sizeof(__pyx_k_error), 0, 0, 1, 1},
+  {&__pyx_n_s_finish, __pyx_k_finish, sizeof(__pyx_k_finish), 0, 0, 1, 1},
   {&__pyx_n_s_flags, __pyx_k_flags, sizeof(__pyx_k_flags), 0, 0, 1, 1},
   {&__pyx_n_s_format, __pyx_k_format, sizeof(__pyx_k_format), 0, 0, 1, 1},
   {&__pyx_n_s_fortran, __pyx_k_fortran, sizeof(__pyx_k_fortran), 0, 0, 1, 1},
@@ -18629,6 +19120,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_numpy_core_multiarray_failed_to, __pyx_k_numpy_core_multiarray_failed_to, sizeof(__pyx_k_numpy_core_multiarray_failed_to), 0, 0, 1, 0},
   {&__pyx_kp_s_numpy_core_umath_failed_to_impor, __pyx_k_numpy_core_umath_failed_to_impor, sizeof(__pyx_k_numpy_core_umath_failed_to_impor), 0, 0, 1, 0},
   {&__pyx_n_s_obj, __pyx_k_obj, sizeof(__pyx_k_obj), 0, 0, 1, 1},
+  {&__pyx_n_s_outputCount, __pyx_k_outputCount, sizeof(__pyx_k_outputCount), 0, 0, 1, 1},
   {&__pyx_n_s_pack, __pyx_k_pack, sizeof(__pyx_k_pack), 0, 0, 1, 1},
   {&__pyx_n_s_partIndicies, __pyx_k_partIndicies, sizeof(__pyx_k_partIndicies), 0, 0, 1, 1},
   {&__pyx_n_s_partRadial, __pyx_k_partRadial, sizeof(__pyx_k_partRadial), 0, 0, 1, 1},
@@ -18643,6 +19135,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_pyx_unpickle_Enum, __pyx_k_pyx_unpickle_Enum, sizeof(__pyx_k_pyx_unpickle_Enum), 0, 0, 1, 1},
   {&__pyx_n_s_pyx_vtable, __pyx_k_pyx_vtable, sizeof(__pyx_k_pyx_vtable), 0, 0, 1, 1},
   {&__pyx_n_s_radialBins, __pyx_k_radialBins, sizeof(__pyx_k_radialBins), 0, 0, 1, 1},
+  {&__pyx_n_s_radialDivs, __pyx_k_radialDivs, sizeof(__pyx_k_radialDivs), 0, 0, 1, 1},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_reduce, __pyx_k_reduce, sizeof(__pyx_k_reduce), 0, 0, 1, 1},
   {&__pyx_n_s_reduce_cython, __pyx_k_reduce_cython, sizeof(__pyx_k_reduce_cython), 0, 0, 1, 1},
@@ -22684,6 +23177,18 @@ __pyx_fail:
     result.memview = NULL;
     result.data = NULL;
     return result;
+}
+
+/* MemviewDtypeToObject */
+  static CYTHON_INLINE PyObject *__pyx_memview_get_double(const char *itemp) {
+    return (PyObject *) PyFloat_FromDouble(*(double *) itemp);
+}
+static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *obj) {
+    double value = __pyx_PyFloat_AsDouble(obj);
+    if ((value == (double)-1) && PyErr_Occurred())
+        return 0;
+    *(double *) itemp = value;
+    return 1;
 }
 
 /* Declarations */
