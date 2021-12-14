@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+import sys
+print(sys.version)
 # In[1]:
 
 
@@ -24,13 +25,13 @@ npix = hp.nside2npix(nside)
 # In[3]:
 
 
-rangeOfInterest = 4096 #only look at particles within this
+rangeOfInterest = 2048 #only look at particles within this
 
 radialDivs = 256
 
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
-boxSize= 8192 # side length of box
+boxSize= 4096 # side length of box
 particleSize = 2048 #the total number of particles is n**3
 
 run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
@@ -65,6 +66,7 @@ getAngDiaDist = interp1d(comovDist,angDiaDist)
 getRedshift = interp1d(comovDist, redshifts)
 
 def getScalingFactor(comov_dist):
+    #add the window function which is the normalized dN/Dx which is from the data, then convert that to a dN/dz to feed into ccl
     return 1/(1+getRedshift(comov_dist))
 
 del comovDist
@@ -97,7 +99,7 @@ def unf_read_file(file, p_list=[], np=6):
 
 # In[8]:
 
-direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2048R4096/"
+direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2048R2048/"
 inputFiles = os.listdir(direc)
 print("Found "+str(len(inputFiles))+" Files")
 
@@ -110,13 +112,13 @@ def readSetToBins(fileName, index):
     if os.path.isfile(path):
             
         unf_read_file(path, p_list=tempArray)
-        #print("Reading file "+path)
+        print("Reading file "+path)
         reshaped = np.reshape(tempArray,(-1,6))
             
         tempArray = []
             
         numParticles = reshaped.shape[0]
-            
+        #print(str(numParticles))    
         #which radial bin each particle is in
         partRadial =  np.zeros(numParticles)
 
@@ -151,7 +153,7 @@ def readSetToBins(fileName, index):
 num_Files = len(inputFiles)
 numProcess = num_Files
 
-returnValues = Parallel(n_jobs=28)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=24)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
@@ -182,7 +184,7 @@ beginSec = 0
 for i in range(0,numProcess):
     #this is the number of particles in each returned list
     listParticles = returnValues[i][0].shape[0]
-    
+    #print("Particles in file: " + str(listParticles))
     #the first return of each process is particleIndex
     
     outputIndicies[beginSec:beginSec+listParticles] = returnValues[i][0]
@@ -197,7 +199,7 @@ for i in range(0,numProcess):
 del returnValues
 
 print("Made numpy arrays and deleted return array")
-
+print("Mean distance:" + str(np.mean(outputRadial)))
 allMaps = ProcessingFunctions.binParticles(outputIndicies, outputRadial.astype(np.int64), outputVelocity, npix, radialDivs)
 
 del outputIndicies
@@ -207,7 +209,7 @@ del outputVelocity
 print("Binnned particles into maps")
 
 outputCount = allMaps[0]
-outputkSZ = allMaps[1]
+velocityField = allMaps[1]
 
 del allMaps
 
@@ -215,14 +217,27 @@ del allMaps
 numcount = np.sum(outputCount,axis=0)
 print(sum(numcount))
 
+dNdx = np.sum(outputCount,axis=1)/np.sum(outputCount)
+
 n_bar = np.average(numcount)
 overdensity = (numcount-n_bar)/n_bar
+
+#we want the middle of the ROIs to represent where the box is
+def moving_average(a, n=2) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
+
+comovValues = moving_average(ROIs)
+redshiftValues = getRedshift(comovValues)
 
 integratedOver = np.zeros(npix)
 
 for i in range(1,radialDivs):
-    integratedOver = integratedOver + (outputCount[i]/np.average(outputCount[i])-1)
+    integratedOver = integratedOver + (outputCount[i]/np.average(outputCount[i])-1)*dNdx[i]*(ROIs[i+1]-ROIs[i])
 
+np.savetxt("MAPS/dNdz",dNdx)
+np.savetxt("MAPS/redshifts",redshiftValues)
 
 hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
 
@@ -231,16 +246,9 @@ hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integrated
 
 # In[13]:
 
+velocityFieldMap = np.sum(velocityField,axis=0)
 
-almostkSZ = np.sum(outputkSZ,axis=0)
-#hp.mollview(almostkSZ,xsize=3200,min=-30,max=30)
-
-
-# In[14]:
-
-
-#plt.hist(almostkSZ,bins=np.linspace(-30,30));
-
+hp.fitsfunc.write_map("MAPS/velocityField"+run_Ident+".fits", velocityFieldMap, overwrite=True)
 
 # In[15]:
 
@@ -267,10 +275,10 @@ mu = (1-YHe)/mH+YHe/mHe
 sigmaT = 6.6524*(10**-25) #cm^2
 
 #convert l-picola units to SI units
-correctUnits = outputkSZ*(unitMass*unitVelocity/unitLength**2)
+correctUnits = velocityField*(unitMass*unitVelocity/unitLength**2)
 #summation is now in (g/s)
 
-almosterkSZ = -(sigmaT*fb*mu)*(correctUnits/(c*hp.nside2resol(nside)**2))
+almosterkSZ = -(sigmaT*fb*mu)*(outputCount*correctUnits/(c*hp.nside2resol(nside)**2))
 #hp.mollview(almosterkSZ,xsize=3200,min=-2*10**-6,max=2*10**-6)
 hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0), overwrite=True)
 
@@ -337,7 +345,7 @@ npix = hp.nside2npix(nside)
 numProcess = 64
 pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
 print("Starting to Calculate Convergences")
-convergenceReturn = Parallel(n_jobs=64)(delayed(ProcessingFunctions.getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1], convergenceFactors, outputCount,radialDivs) for i in range(0,numProcess))
+convergenceReturn = Parallel(n_jobs=30)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
 print("Calculated Convergences")
 
 #to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
@@ -393,7 +401,8 @@ for i in range(1,radialDivs):
     deflectedTheta = baseAngle[0]+divLensPot[1]
     deflectedPhi = baseAngle[1]+divLensPot[2]
 
-    print("add layer "+ str(i))
+    if(i%50==0):
+        print("add layer "+ str(i))
  
     lensedkSZ = lensedkSZ + hp.pixelfunc.get_interp_val(almosterkSZ[i],deflectedTheta,deflectedPhi)
 
