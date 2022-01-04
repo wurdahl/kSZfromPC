@@ -174,9 +174,9 @@ print("Read all Files")
 #this can be a very memory intensive part:
 
 #make the longest list possible that can hold all of the particles
-outputIndicies = np.full((particleSize**3+3000),0)
-outputRadial = np.full((particleSize**3+3000),-1)
-outputVelocity = np.full((particleSize**3+3000),0.0,dtype=np.double)
+outputIndicies = np.full((particleSize**3+6000),0)
+outputRadial = np.full((particleSize**3+6000),-1)
+outputVelocity = np.full((particleSize**3+6000),0.0,dtype=np.double)
 
 #this is where each loop of the array should start writing to the array
 beginSec = 0
@@ -242,7 +242,6 @@ np.savetxt("MAPS/redshifts",redshiftValues)
 hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
 
 hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integratedOver, overwrite=True)
-
 
 # In[13]:
 

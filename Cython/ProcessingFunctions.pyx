@@ -76,11 +76,14 @@ cpdef binParticles(long[:] partIndicies, long[:] partRadial, double[:] partVeloc
 
     cdef Py_ssize_t i
 
-    for i in prange(partIndicies.shape[0],nogil=True):
+    for i in range(partIndicies.shape[0]):
         if(partRadial[i]!=-1):
             densityFeild_view[partRadial[i], partIndicies[i]] +=1
             velocityFeild_view[partRadial[i], partIndicies[i]] += partVelocity[i]
-
+    
+    velocityFeild_view = np.divide(velocityFeild_view,densityFeild_view)
+    velocityFeild[velocityFeild == np.inf] = 0
+ 
     return densityFeild, velocityFeild
     
 #getConvergenceForPixel
