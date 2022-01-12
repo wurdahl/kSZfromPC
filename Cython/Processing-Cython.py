@@ -32,10 +32,11 @@ radialDivs = 256
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize= 4096 # side length of box
-particleSize = 2048 #the total number of particles is n**3
+particleSize = 2560 #the total number of particles is n**3
 
 run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
 
+direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2560R2048/"
 
 # In[4]:
 #this can convert cartesian data into radial data
@@ -99,7 +100,6 @@ def unf_read_file(file, p_list=[], np=6):
 
 # In[8]:
 
-direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2048R2048/"
 inputFiles = os.listdir(direc)
 print("Found "+str(len(inputFiles))+" Files")
 
