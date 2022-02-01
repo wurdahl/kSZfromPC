@@ -32,11 +32,11 @@ radialDivs = 256
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize= 4096 # side length of box
-particleSize = 2560 #the total number of particles is n**3
+particleSize = 2048 #the total number of particles is n**3
 
 run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
 
-direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2560R2048/"
+direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2048R2048/"
 
 # In[4]:
 #this can convert cartesian data into radial data
@@ -213,6 +213,11 @@ velocityField = allMaps[1]
 
 del allMaps
 
+#divide velocity field by output count in otder to get average velocity in each cell
+velocityField = np.divide(velocityField,outputCount)
+velocityField[velocityField==np.inf] = 0
+velocityField[np.isnan(velocityField)] = 0
+
 #combine the different radial divs for viewing
 numcount = np.sum(outputCount,axis=0)
 print(sum(numcount))
@@ -228,7 +233,9 @@ def moving_average(a, n=2) :
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-comovValues = moving_average(ROIs)
+h=0.67
+
+comovValues = moving_average(ROIs)/h
 redshiftValues = getRedshift(comovValues)
 
 integratedOver = np.zeros(npix)
@@ -243,6 +250,8 @@ hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwri
 
 hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integratedOver, overwrite=True)
 
+hp.fitsfunc.write_map("MAPS/layerOverdensity"+run_Ident+".fits", outputCount[-1,:], overwrite=True)
+
 # In[13]:
 
 velocityFieldMap = np.sum(velocityField,axis=0)
@@ -256,7 +265,7 @@ OmegaB = 0.048
 OmegaM = 0.31
 fb = OmegaB/OmegaM
 
-h = 0.69
+h = 0.67
 H = (3.2407789/h)*10**-18
 G = 6.674*10**-8
 unitLength = 3.085678*10**24 #cm/h - This is one megaparsec
