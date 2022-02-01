@@ -68,23 +68,23 @@ cpdef convertToSpherical(double[:,:] xyz):
 
 cpdef binParticles(long[:] partIndicies, long[:] partRadial, double[:] partVelocity, long npix, long radialBins):
        
-    densityFeild = np.zeros((radialBins, npix), dtype=np.int64)
-    velocityFeild = np.zeros((radialBins,npix),dtype=np.double)
+    densityField = np.zeros((radialBins, npix), dtype=np.int64)
+    velocityField = np.zeros((radialBins,npix),dtype=np.double)
     
-    cdef long[:,:] densityFeild_view = densityFeild
-    cdef double[:,:] velocityFeild_view = velocityFeild
+    cdef long[:,:] densityField_view = densityField
+    cdef double[:,:] velocityField_view = velocityField
 
     cdef Py_ssize_t i
 
     for i in range(partIndicies.shape[0]):
         if(partRadial[i]!=-1):
-            densityFeild_view[partRadial[i], partIndicies[i]] +=1
-            velocityFeild_view[partRadial[i], partIndicies[i]] += partVelocity[i]
+            densityField_view[partRadial[i], partIndicies[i]] +=1
+            velocityField_view[partRadial[i], partIndicies[i]] += partVelocity[i]
     
-    velocityFeild_view = np.divide(velocityFeild_view,densityFeild_view)
-    velocityFeild[velocityFeild == np.inf] = 0
+    #velocityField_view = np.divide(velocityField_view,densityField_view)
+    #velocityField[velocityField == np.inf] = 0
  
-    return densityFeild, velocityFeild
+    return densityField, velocityField
     
 #getConvergenceForPixel
 cdef getConvergenceForPixelMat(long pixelIndex, double[:,:] convergenceFactors, double[:,:] outputCount):
