@@ -4,64 +4,70 @@ import sys
 print(sys.version)
 # In[1]:
 
-
 import struct
 import numpy as np
 import os
 from joblib import Parallel, delayed
 
+np.seterr(divide='ignore')
 
 # In[2]:
 
 
-#import matplotlib.pyplot as plt
 import healpy as hp
-nside = 2048
+nside = 1024
 npix = hp.nside2npix(nside)
 
-#%matplotlib inline
-
+print("Line 20")
 
 # In[3]:
 
-
 rangeOfInterest = 2048 #only look at particles within this
 
-radialDivs = 256
+radialDivs = 4
 
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize= 4096 # side length of box
-particleSize = 2048 #the total number of particles is n**3
+particleSize = 128 #the total number of particles is n**3
 
 run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
 
-direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2048R2048/"
+direc = "/mnt/d/Washu/Physics Research/l-picola/kSZfromPC/Cython/Data/"
 
+#Hubble parameter
+h = 0.69
+
+print("Line 40")
 # In[4]:
 #this can convert cartesian data into radial data
 #velocity still needs to be divided by angular diamter distance squared
 import ProcessingFunctions
 
 # In[5]:
-
+print("Line 47")
 
 # code for determinig angular diameter distance from comving distance
+
+print("line 51")
 
 from classy import Class
 from scipy.interpolate import interp1d
 
+print("Line 56")
 LambdaCDM = Class()
-
-LambdaCDM.set({ 'omega_b':0.022032 , 'omega_cdm' :0.12038 , 'h':0.67556 , 'A_s':2.215e-9 , 'n_s' :0.9619 , 'tau_reio' :0.0925})
-
+print("Line 58")
+LambdaCDM.set({ 'omega_b':0.022032 , 'omega_cdm' :0.125 , 'h':0.69 ,  'A_s':2.215e-9 , 'n_s' :0.96 , 'tau_reio' :0.0925})
+print("Line 60")
 LambdaCDM.set({ 'output' :'tCl,pCl,lCl,mPk','lensing' :'yes' ,'P_k_max_1/Mpc': 3.0})
-
+print("Line 62")
 LambdaCDM.compute()
-
+print("Line 64")
 comovDist = LambdaCDM.get_background()['comov. dist.']
 angDiaDist = LambdaCDM.get_background()['ang.diam.dist.']
 redshifts = LambdaCDM.get_background()['z']
+
+print("Line 69")
 
 getAngDiaDist = interp1d(comovDist,angDiaDist)
 getRedshift = interp1d(comovDist, redshifts)
@@ -110,50 +116,49 @@ def readSetToBins(fileName, index):
     path = direc + fileName
 
     if os.path.isfile(path):
-            
+
         unf_read_file(path, p_list=tempArray)
         print("Reading file "+path)
         reshaped = np.reshape(tempArray,(-1,6))
-            
+
         tempArray = []
-            
+
         numParticles = reshaped.shape[0]
-        #print(str(numParticles))    
+        #print(str(numParticles))
         #which radial bin each particle is in
         partRadial =  np.zeros(numParticles)
 
         offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
-            
+
         reshaped = np.subtract(reshaped,offset)
         del offset
-            
+
         sphereConversion = ProcessingFunctions.convertToSpherical(reshaped)
         del reshaped
         #reshaped = []
 
         partVelocity = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
-            
-                      
+
+
         partIndex = hp.ang2pix(nside,sphereConversion[:,1],sphereConversion[:,2])
 
         for j in range(0,radialDivs):
             #set the values of the array to the correspodning radial bin
- 
+
             partRadial[(sphereConversion[:,0]>ROIs[j]) & (sphereConversion[:,0]<ROIs[j+1])] = j
 
         partRadial[(sphereConversion[:,0]>ROIs[j+1])] = -1
-                                          
-    #print(str(index)+" done")
-   
-    return [partIndex,partRadial, partVelocity]
 
+    #print(str(index)+" done")
+
+    return [partIndex,partRadial, partVelocity]
 
 # In[9]:
 
 num_Files = len(inputFiles)
 numProcess = num_Files
 
-returnValues = Parallel(n_jobs=24)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=14)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
@@ -166,7 +171,7 @@ print("Read all Files")
 #structure of returnValues is weird
 #the first length is the number of processes corresponding to each process
 #the second length is 3 corresponding to the three arrays that were returned from each process: numcount, totalVelThread
-#the third length is 
+#the third length is
 #the fourth length is
 
 #combine the returns from each processor by summing the first axis
@@ -186,15 +191,15 @@ for i in range(0,numProcess):
     listParticles = returnValues[i][0].shape[0]
     #print("Particles in file: " + str(listParticles))
     #the first return of each process is particleIndex
-    
+
     outputIndicies[beginSec:beginSec+listParticles] = returnValues[i][0]
-    
+
     #the second return is the radial index
     outputRadial[beginSec:beginSec+listParticles] = returnValues[i][1]
 
     #the third return is the particle's radial Velocity
     outputVelocity[beginSec:beginSec+listParticles] = returnValues[i][2]
-    
+
     beginSec = beginSec + listParticles
 del returnValues
 
@@ -233,8 +238,6 @@ def moving_average(a, n=2) :
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-h=0.67
-
 comovValues = moving_average(ROIs)/h
 redshiftValues = getRedshift(comovValues)
 
@@ -265,7 +268,6 @@ OmegaB = 0.048
 OmegaM = 0.31
 fb = OmegaB/OmegaM
 
-h = 0.67
 H = (3.2407789/h)*10**-18
 G = 6.674*10**-8
 unitLength = 3.085678*10**24 #cm/h - This is one megaparsec
@@ -310,7 +312,7 @@ for kSZLayer in range(0,radialDivs):
     for lensingLayer in range(0,kSZLayer):
         kSZDist = (kSZLayer+0.5)*(dr)
         lensingLayerDist = (lensingLayer+0.5)*(dr)
-        
+
         convergenceFactors[kSZLayer,lensingLayer] = (1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
 
 
@@ -331,9 +333,9 @@ def getConvergenceForPixel(pixelIndex):
         for lensingLayer in range(0,kSZLayer):
             kSZDist = (kSZLayer+0.5)*(dr)
             lensingLayerDist = (lensingLayer+0.5)*(dr)
-        
+
             convergencePixels[kSZLayer] = convergencePixels[kSZLayer] + outputCount[lensingLayer,pixelIndex]*(1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
-            
+
     return convergencePixels
 
 def getConvergenceForPixelMat(pixelIndex):
@@ -353,7 +355,7 @@ npix = hp.nside2npix(nside)
 numProcess = 64
 pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
 print("Starting to Calculate Convergences")
-convergenceReturn = Parallel(n_jobs=30)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
+convergenceReturn = Parallel(n_jobs=16)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
 print("Calculated Convergences")
 
 #to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
@@ -391,6 +393,7 @@ kalms = hp.sphtfunc.map2alm(convergenceMaps[-1])
 lmax=hp.Alm.getlmax(len(kalms))
 ls, ms = hp.Alm.getlm(lmax)
 lFactor = -ls*(ls+1)
+lFactor[0] = 1
 
 baseAngle = hp.pixelfunc.pix2ang(nside, np.arange(0,npix))
 
@@ -400,23 +403,22 @@ lensedOverdensity = np.zeros(npix)
 
 for i in range(1,radialDivs):
     kalms=hp.sphtfunc.map2alm(convergenceMaps[i])
-    
+
     lensPotential = kalms/(lFactor)
     lensPotential[0]=0+0j
-    
+    print("Line 408")
     divLensPot = hp.alm2map_der1(lensPotential,nside)
-    
+    print("Line 411")
     deflectedTheta = baseAngle[0]+divLensPot[1]
     deflectedPhi = baseAngle[1]+divLensPot[2]
-
+    print("line 414")
     if(i%50==0):
         print("add layer "+ str(i))
- 
+    print("line 417")
     lensedkSZ = lensedkSZ + hp.pixelfunc.get_interp_val(almosterkSZ[i],deflectedTheta,deflectedPhi)
-
+    print("Line 418")
     lensedOverdensity = lensedOverdensity + hp.pixelfunc.get_interp_val(outputCount[i],deflectedTheta, deflectedPhi)
 
+print("line 421")
 hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
 hp.fitsfunc.write_map("MAPS/lensedOverdensity"+run_Ident+".fits", lensedOverdensity, overwrite=True)
-
-
