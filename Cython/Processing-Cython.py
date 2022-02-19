@@ -4,27 +4,30 @@ import sys
 print(sys.version)
 # In[1]:
 
+
 import struct
 import numpy as np
 import os
 from joblib import Parallel, delayed
 
-np.seterr(divide='ignore')
 
 # In[2]:
 
 
+#import matplotlib.pyplot as plt
 import healpy as hp
-nside = 1024
+nside = 128
 npix = hp.nside2npix(nside)
 
-print("Line 20")
+#%matplotlib inline
+
 
 # In[3]:
 
+
 rangeOfInterest = 2048 #only look at particles within this
 
-radialDivs = 4
+radialDivs = 256
 
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
@@ -38,36 +41,30 @@ direc = "/mnt/d/Washu/Physics Research/l-picola/kSZfromPC/Cython/Data/"
 #Hubble parameter
 h = 0.69
 
-print("Line 40")
 # In[4]:
 #this can convert cartesian data into radial data
 #velocity still needs to be divided by angular diamter distance squared
 import ProcessingFunctions
 
 # In[5]:
-print("Line 47")
+
 
 # code for determinig angular diameter distance from comving distance
-
-print("line 51")
 
 from classy import Class
 from scipy.interpolate import interp1d
 
-print("Line 56")
 LambdaCDM = Class()
-print("Line 58")
-LambdaCDM.set({ 'omega_b':0.022032 , 'omega_cdm' :0.125 , 'h':0.69 ,  'A_s':2.215e-9 , 'n_s' :0.96 , 'tau_reio' :0.0925})
-print("Line 60")
+
+LambdaCDM.set({ 'omega_b':0.022032 , 'omega_cdm' :0.125 , 'h':0.69 , 'A_s':2.215e-9 , 'n_s' :0.96 , 'tau_reio' :0.0925})
+
 LambdaCDM.set({ 'output' :'tCl,pCl,lCl,mPk','lensing' :'yes' ,'P_k_max_1/Mpc': 3.0})
-print("Line 62")
+
 LambdaCDM.compute()
-print("Line 64")
+
 comovDist = LambdaCDM.get_background()['comov. dist.']
 angDiaDist = LambdaCDM.get_background()['ang.diam.dist.']
 redshifts = LambdaCDM.get_background()['z']
-
-print("Line 69")
 
 getAngDiaDist = interp1d(comovDist,angDiaDist)
 getRedshift = interp1d(comovDist, redshifts)
@@ -128,6 +125,7 @@ def readSetToBins(fileName, index):
         #which radial bin each particle is in
         partRadial =  np.zeros(numParticles)
 
+        #move the box so it is centered around the origin
         offset = np.append((boxSize/2)*np.ones((np.shape(reshaped)[0],3)),np.zeros((np.shape(reshaped)[0],3)),axis=1)
 
         reshaped = np.subtract(reshaped,offset)
@@ -137,7 +135,11 @@ def readSetToBins(fileName, index):
         del reshaped
         #reshaped = []
 
-        partVelocity = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
+        #extract the radial velocity of the particles
+        partVelocity = sphereConversion[:,3]
+
+        #make a velocity over angular diameter distance conversion for use later in making kSZ
+        partVelocityAdjusted = sphereConversion[:,3]/np.power(getAngDiaDist(sphereConversion[:,0]),2)
 
 
         partIndex = hp.ang2pix(nside,sphereConversion[:,1],sphereConversion[:,2])
@@ -151,14 +153,14 @@ def readSetToBins(fileName, index):
 
     #print(str(index)+" done")
 
-    return [partIndex,partRadial, partVelocity]
+    return [partIndex,partRadial, partVelocity, partVelocityAdjusted]
 
 # In[9]:
 
 num_Files = len(inputFiles)
 numProcess = num_Files
 
-returnValues = Parallel(n_jobs=14)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=24)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
@@ -170,7 +172,7 @@ print("Read all Files")
 
 #structure of returnValues is weird
 #the first length is the number of processes corresponding to each process
-#the second length is 3 corresponding to the three arrays that were returned from each process: numcount, totalVelThread
+#the second length is 4 corresponding to the three arrays that were returned from each process: numcount, totalVelThread
 #the third length is
 #the fourth length is
 
@@ -182,6 +184,7 @@ print("Read all Files")
 outputIndicies = np.full((particleSize**3+6000),0)
 outputRadial = np.full((particleSize**3+6000),-1)
 outputVelocity = np.full((particleSize**3+6000),0.0,dtype=np.double)
+outputVelocityAdjusted = np.full((particleSize**3+6000),0.0,dtype=np.double)
 
 #this is where each loop of the array should start writing to the array
 beginSec = 0
@@ -200,21 +203,26 @@ for i in range(0,numProcess):
     #the third return is the particle's radial Velocity
     outputVelocity[beginSec:beginSec+listParticles] = returnValues[i][2]
 
+    #the fourth return is the particle's radial velocity divided by the angular diameter distance squared
+    outputVelocityAdjusted[beginSec:beginSec+listParticles] = returnValues[i][3]
+
     beginSec = beginSec + listParticles
 del returnValues
 
 print("Made numpy arrays and deleted return array")
 print("Mean distance:" + str(np.mean(outputRadial)))
-allMaps = ProcessingFunctions.binParticles(outputIndicies, outputRadial.astype(np.int64), outputVelocity, npix, radialDivs)
+allMaps = ProcessingFunctions.binParticles(outputIndicies, outputRadial.astype(np.int64), outputVelocity, outputVelocityAdjusted, npix, radialDivs)
 
 del outputIndicies
 del outputRadial
 del outputVelocity
+del outputVelocityAdjusted
 
 print("Binnned particles into maps")
 
 outputCount = allMaps[0]
 velocityField = allMaps[1]
+adjustedVelocityField = allMaps[2]
 
 del allMaps
 
@@ -255,6 +263,8 @@ hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integrated
 
 hp.fitsfunc.write_map("MAPS/layerOverdensity"+run_Ident+".fits", outputCount[-1,:], overwrite=True)
 
+hp.fitsfunc.write_map("MAPS/midlayerOverdensity"+run_Ident+".fits", outputCount[radialDivs//2,:], overwrite=True)
+
 # In[13]:
 
 velocityFieldMap = np.sum(velocityField,axis=0)
@@ -285,7 +295,7 @@ mu = (1-YHe)/mH+YHe/mHe
 sigmaT = 6.6524*(10**-25) #cm^2
 
 #convert l-picola units to SI units
-correctUnits = velocityField*(unitMass*unitVelocity/unitLength**2)
+correctUnits = adjustedVelocityField*(unitMass*unitVelocity/unitLength**2)
 #summation is now in (g/s)
 
 almosterkSZ = -(sigmaT*fb*mu)*(outputCount*correctUnits/(c*hp.nside2resol(nside)**2))
@@ -355,7 +365,7 @@ npix = hp.nside2npix(nside)
 numProcess = 64
 pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
 print("Starting to Calculate Convergences")
-convergenceReturn = Parallel(n_jobs=16)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
+convergenceReturn = Parallel(n_jobs=30)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
 print("Calculated Convergences")
 
 #to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
@@ -406,19 +416,18 @@ for i in range(1,radialDivs):
 
     lensPotential = kalms/(lFactor)
     lensPotential[0]=0+0j
-    print("Line 408")
+
     divLensPot = hp.alm2map_der1(lensPotential,nside)
-    print("Line 411")
+
     deflectedTheta = baseAngle[0]+divLensPot[1]
     deflectedPhi = baseAngle[1]+divLensPot[2]
-    print("line 414")
+
     if(i%50==0):
         print("add layer "+ str(i))
-    print("line 417")
+
     lensedkSZ = lensedkSZ + hp.pixelfunc.get_interp_val(almosterkSZ[i],deflectedTheta,deflectedPhi)
-    print("Line 418")
+
     lensedOverdensity = lensedOverdensity + hp.pixelfunc.get_interp_val(outputCount[i],deflectedTheta, deflectedPhi)
 
-print("line 421")
 hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
 hp.fitsfunc.write_map("MAPS/lensedOverdensity"+run_Ident+".fits", lensedOverdensity, overwrite=True)
