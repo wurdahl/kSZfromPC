@@ -27,7 +27,7 @@ npix = hp.nside2npix(nside)
 
 rangeOfInterest = 2048 #only look at particles within this
 
-radialDivs = 256
+radialDivs = 300
 
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
@@ -249,10 +249,13 @@ redshiftValues = getRedshift(comovValues)
 #for i in range(1,radialDivs):
 #    integratedOver = integratedOver + (outputCount[i]/np.average(outputCount[i])-1)*dNdx[i]*(ROIs[i+1]-ROIs[i])
 
-np.savetxt("MAPS/dNdz"+str(rangeOfInterest),dNdx)
-np.savetxt("MAPS/redshifts"+str(rangeOfInterest),redshiftValues)
+np.save("MAPS/dNdz"+run_Ident,dNdx)
+np.save("MAPS/redshifts"+run_Ident,redshiftValues)
 
 hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
+
+#Save full density data:
+np.save("MAPS/density"+run_Ident,outputCount)
 
 #hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integratedOver, overwrite=True)
 
@@ -267,7 +270,6 @@ velocityFieldMap = np.sum(velocityField,axis=0)
 hp.fitsfunc.write_map("MAPS/velocityField"+run_Ident+".fits", velocityFieldMap, overwrite=True)
 
 # In[15]:
-
 
 OmegaB = 0.048
 OmegaM = 0.31
@@ -389,9 +391,11 @@ convergenceMaps = prefactors*convergenceMaps
 
 
 #hp.mollview(np.sum(convergenceMaps,axis=0))
-hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[radialDivs-1], overwrite=True)
+hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", np.sum(convergenceMaps,axis=0), overwrite=True)
 
 hp.fitsfunc.write_map("MAPS/midConvergence"+run_Ident+".fits", convergenceMaps[radialDivs//2], overwrite=True)
+
+np.save("MAPS/convergence"+run_Ident,convergenceMaps)
 
 # In[ ]:
 kalms = hp.sphtfunc.map2alm(convergenceMaps[-1])
@@ -427,5 +431,3 @@ for i in range(1,radialDivs):
 
 hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
 hp.fitsfunc.write_map("MAPS/lensedOverdensity"+run_Ident+".fits", lensedOverdensity, overwrite=True)
-
-
