@@ -45,7 +45,7 @@ ksz_prefac = -sigma_T * fb*mu # * T_CMB
 T_CMB = 2.725e6 # uK
 y_to_tSZ = 0.187 # g(v) for 217 gHZ from table 1 in https://arxiv.org/pdf/1502.01596.pdf
 
-NSIDE = 4096
+NSIDE = 512
 NPIX = 12*NSIDE**2
 OMEGA_PIX = 4.0*np.pi/NPIX
 
@@ -61,18 +61,18 @@ M_CUT_PERCENTILE = 0.0 # 99.999 is top 0.001% of halos
 ## Working dir ##
 #################
 
-MAPS_OUTPUT_DIR = "halomaps.z"+("%.2f" % Z_MIN)+"-z"+("%.2f" % Z_MAX)+".mp"+("%.4f" % M_CUT_PERCENTILE)+"_NSIDE-"+str(NSIDE)+"/"
+# MAPS_OUTPUT_DIR = "halomaps.z"+("%.2f" % Z_MIN)+"-z"+("%.2f" % Z_MAX)+".mp"+("%.4f" % M_CUT_PERCENTILE)+"_NSIDE-"+str(NSIDE)+"/"
 
-def mkdir_p(path):
-  try:
-    os.makedirs(path)
-  except OSError as exc:  # Python >2.5
-    if exc.errno == errno.EEXIST and os.path.isdir(path):
-      pass
-    else:
-      raise
+# def mkdir_p(path):
+#   try:
+#     os.makedirs(path)
+#   except OSError as exc:  # Python >2.5
+#     if exc.errno == errno.EEXIST and os.path.isdir(path):
+#       pass
+#     else:
+#       raise
 
-mkdir_p(MAPS_OUTPUT_DIR)
+# mkdir_p(MAPS_OUTPUT_DIR)
 
 #################
 ## Import maps ##

@@ -15,138 +15,6 @@ pywig.wig_table_init(3*NSIDE_MAX, 3)
 pywig.wig_temp_init(3*NSIDE_MAX)
 
 
-parser = argparse.ArgumentParser(description='Scripts to perform reconstruction from websky data.')
-
-parser.add_argument('-vc', '--velocity_comparison', help='Compare velocity maps generated using different methods.', action='store_true')
-parser.add_argument('-kc', '--ksz_comparison', help='Compare halo and websky maps.', action='store_true')
-parser.add_argument('-tc', '--tau_comparison', help='Compare different tau maps.', action='store_true')
-parser.add_argument('-kr', '--ksz_reconstruction', help='Perform kSZ reconstruction.', action='store_true')
-
-if not len(sys.argv) > 1 :
-  parser.print_help()
-
-args = parser.parse_args()
-
-
-#############################
-## Velocity map comparison ##
-#############################
-
-if args.velocity_comparison :
-  """Compare power spectra of different velocity maps"""
-
-  VC_OUTPUT_DIR = MAPS_OUTPUT_DIR+"vc/"
-  mkdir_p(VC_OUTPUT_DIR)
-  NSIDE_COARSE = 256
-
-  vrad = getMap("vrad")
-  vrad_coarse = getMap("vrad", NSIDE=NSIDE_COARSE)
-  vrad_conf = getMap("vrad_conf")
-  vrad_conf_coarse = getMap("vrad_conf", NSIDE=NSIDE_COARSE)
-
-  prad = getMap("prad")
-  tau = getMap("tau")
-  vrad_ptau = np.nan_to_num(prad/tau)
-
-  prad_coarse = getMap("prad", NSIDE=NSIDE_COARSE)
-  tau_coarse = getMap("tau", NSIDE=NSIDE_COARSE)
-  vrad_ptau_coarse = np.nan_to_num(prad_coarse/tau_coarse)
-
-  vrad_coarse_2 = np.nan_to_num(hp.ud_grade(vrad*tau, NSIDE_COARSE)/tau_coarse)
-
-  psplot(hp.anafast(vrad), label="vrad", norm=True)
-  psplot(hp.anafast(vrad_coarse), label="vrad_coarse", norm=True)
-  psplot(hp.anafast(vrad_conf), label="vrad_conf", norm=True)
-  psplot(hp.anafast(vrad_conf_coarse), label="vrad_conf_coarse", norm=True)
-  psplot(hp.anafast(vrad_coarse_2), label="vrad_coarse_2", norm=True)
-  psplot(hp.anafast(vrad_ptau), label="vrad_ptau", norm=True)
-  psplot(hp.anafast(vrad_ptau_coarse), label="vrad_ptau_coarse", norm=True)
-  # psplot(unnorm_veff_reconst_ps_scaled, label="unnorm_veff_reconst", norm=True)
-  plt.legend()
-  plt.savefig(VC_OUTPUT_DIR+"sim_velocity_comp_power_spectra.png")
-  plt.close()
-
-
-#################################
-## kSZ dipole field comparison ##
-#################################
-
-if args.ksz_comparison :
-  mkdir_p(MAPS_OUTPUT_DIR+"kc")
-  NSIDE_COARSE = 64
-
-  ksz_websky = getMap("../ksz", NSIDE=NSIDE_COARSE)
-  print("( Mean , std ) ksz_websky = (", np.mean(ksz_websky), ",", np.std(ksz_websky), ")" )
-  ksz_halo = getMap("ksz", NSIDE=NSIDE_COARSE)
-  print("( Mean , std ) ksz_halo = (", np.mean(ksz_halo), ",", np.std(ksz_halo), ")" )
-
-  plt_min, plt_max = np.percentile(ksz_websky, (0.1, 99.9))
-  hp.mollview(ksz_websky, min=plt_min, max=plt_max)
-  plt.title('Websky kSZ map')
-  plt.savefig(MAPS_OUTPUT_DIR+'kc/ksz_websky.png')
-  plt.close()
-
-  plt_min, plt_max = np.percentile(ksz_halo, (0.1, 99.9))
-  hp.mollview(ksz_halo, min=plt_min, max=plt_max)
-  plt.title('Halo catalogue kSZ map')
-  plt.savefig(MAPS_OUTPUT_DIR+'kc/ksz_halo.png')
-  plt.close()
-
-  plt.loglog(hp.anafast(ksz_websky), label="ksz_websky")
-  plt.loglog(hp.anafast(ksz_halo), label="ksz_halo")
-  plt.legend()
-  plt.savefig(MAPS_OUTPUT_DIR+"kc/ksz_sim_comparison_powerspec.png")
-  plt.close()
-
-  plt.semilogx(hp.anafast(ksz_halo,ksz_websky)/np.sqrt(hp.anafast(ksz_halo)*hp.anafast(ksz_websky)))
-  plt.savefig(MAPS_OUTPUT_DIR+"kc/ksz_sim_comparison_corr_coeff.png")
-  plt.close()
-
-
-####################
-## tau comparison ##
-####################
-
-def psplot(ps, label=None, norm=False) :
-  ls = np.arange(len(ps))[1:]
-  if norm :
-    mean_ps = np.mean(ps[1:])
-    plt.loglog(ls, ps[1:]/mean_ps, label=label)
-  else :
-    plt.loglog(ls, ps[1:], label=label)
-
-if args.tau_comparison :
-  NSIDE_WORKING = NSIDE
-  OUTPUT_DIR = MAPS_OUTPUT_DIR+"tau_comparison/"
-  mkdir_p(OUTPUT_DIR)
-
-  # tau_map = getMap("tau", NSIDE=NSIDE_WORKING)
-  # tau_unc_map = getMap("tau_uncertain", NSIDE=NSIDE_WORKING)
-  # N_map = getMap("N", NSIDE=NSIDE_WORKING)
-  # N_unc_map = getMap("N_uncertain", NSIDE=NSIDE_WORKING)
-
-  # tau_ps = hp.anafast(tau_map)
-  # tau_unc_ps = hp.anafast(tau_unc_map)
-  # N_ps = hp.anafast(N_map)
-  # N_unc_ps = hp.anafast(N_unc_map)
-
-  psplot(tau_ps, label="tau", norm=True)
-  psplot(tau_unc_ps, label="tau + unc.", norm=True)
-  psplot(N_ps, label="N", norm=True)
-  psplot(N_unc_ps, label="N + unc.", norm=True)
-
-  psplot(np.concatenate(([0], savgol_filter(tau_ps[1:], 51, 3))), label="SG tau", norm=True)
-  psplot(np.concatenate(([0], savgol_filter(tau_unc_ps[1:], 51, 3))), label="SG tau + unc.", norm=True)
-  psplot(np.concatenate(([0], savgol_filter(N_ps[1:], 51, 3))), label="SG N", norm=True)
-  psplot(np.concatenate(([0], savgol_filter(N_unc_ps[1:], 51, 3))), label="SG N + unc.", norm=True)
-  
-  plt.legend()
-  plt.savefig(OUTPUT_DIR+"tau_ps.png")
-  plt.close()
-
-
-
-
 ####################
 ## Reconstruction ##
 ####################
@@ -170,43 +38,52 @@ def getNinv(l, ls, Cltd, ClTT, Cldd) :
     Ninv = 1.0e50 # N = 1.0e-50
   return Ninv
 
-if args.ksz_reconstruction :
+if True :
 
   NSIDE_WORKING = NSIDE
-  OUTPUT_DIR = MAPS_OUTPUT_DIR+"ksz_reconstruction/"
-  mkdir_p(OUTPUT_DIR)
+  #OUTPUT_DIR = MAPS_OUTPUT_DIR+"ksz_reconstruction/"
+  OUTPUT_DIR = "."
+  #mkdir_p(OUTPUT_DIR)
 
-  tau_map = -1.0*getMap("N_uncertain", NSIDE=NSIDE_WORKING) #
-  rho_map = getMap("N_uncertain", NSIDE=NSIDE_WORKING) # _uncertain
+  #Overdensity maps
+  #tau_map = -1.0*getMap("N_uncertain", NSIDE=NSIDE_WORKING) #
+  tau_map = -1.0*hp.read_map("./MAPS/overdensity_NS_512_R_2048_P_2048_DV_64.fits")
+  rho_map = -1.0*tau_map#getMap("N_uncertain", NSIDE=NSIDE_WORKING) # _uncertain
   
-  vrad_map = getMap("vrad", NSIDE=NSIDE_WORKING) # Directly averaged velocity
-  ksz_map = getMap("../ksz", NSIDE=NSIDE_WORKING) # websky kSZ
+  #Velocity Maps
+  #vrad_map = getMap("vrad", NSIDE=NSIDE_WORKING) # Directly averaged velocity
+  vrad_map = hp.read_map("./MAPS/velocityField_NS_512_R_2048_P_2048_DV_64.fits")
+  #kSZ Map
+  #ksz_map = getMap("../ksz", NSIDE=NSIDE_WORKING) # websky kSZ
+  ksz_map = hp.read_map("./MAPS/kSZ_NS_512_R_2048_P_2048_DV_64.fits")
   # ksz_map = getMap("ksz", NSIDE=NSIDE_WORKING) # kSZ for this bin only
   # ksz_map = getMap("../ksz_halos", NSIDE=NSIDE_WORKING) # kSZ from halo catalogue only
 
-  try:
-    _CMB_foo = CMB_map[0]
-  except Exception as e:
-    CMB_alms = hp.fitsfunc.read_alm('lensed_alm.fits').astype(np.complex)
-    CMB_map = hp.alm2map(CMB_alms, NSIDE_WORKING)
-  patchy_ksz_map = getMap("../ksz_patchy", NSIDE=NSIDE_WORKING) # websky patchy kSZ
-  tsz_map = T_CMB*y_to_tSZ*getMap("../tsz", NSIDE=NSIDE_WORKING) # websky tSZ
-  Obs_T_map = ksz_map + CMB_map + patchy_ksz_map + tsz_map
+ 
+ 
+  #Read in CMB Map
+  CMB_map = 0.0*hp.sphtfunc.synfast(cls=np.ones(6144),nside=512);#hp.alm2map(CMB_alms, NSIDE_WORKING)
+  CMB_alms = hp.map2alm(CMB_map) #hp.fitsfunc.read_alm('lensed_alm.fits').astype(np.complex)
+  #Higher redshift kSZ that we aven't modelled- Later
+  #patchy_ksz_map = getMap("../ksz_patchy", NSIDE=NSIDE_WORKING) # websky patchy kSZ
+  #Residual tSZ - contaminant
+  #tsz_map = T_CMB*y_to_tSZ*getMap("../tsz", NSIDE=NSIDE_WORKING) # websky tSZ
+  Obs_T_map = ksz_map + CMB_map# + patchy_ksz_map + tsz_map
 
-  # CMB power spectra
-  # CMB_PS = hp.anafast(CMB_map)
-  # ksz_PS = hp.anafast(ksz_map)
+  #CMB power spectra
+  CMB_PS = hp.anafast(CMB_map)
+  ksz_PS = hp.anafast(ksz_map)
   # patchy_ksz_PS = hp.anafast(patchy_ksz_map)
   # tsz_PS = hp.anafast(tsz_map)
   # Obs_T_PS = hp.anafast(Obs_T_map)
-  # psplot(CMB_PS, label="CMB")
-  # psplot(ksz_PS, label="kSZ")
+  psplot(CMB_PS, label="CMB")
+  psplot(ksz_PS, label="kSZ")
   # psplot(patchy_ksz_PS, label="Patchy kSZ")
   # psplot(tsz_PS, label="tSZ")
   # psplot(Obs_T_PS, label="Total")
-  # plt.legend()
-  # plt.savefig(OUTPUT_DIR+"CMB_PS.png")
-  # plt.close()
+  plt.legend()
+  plt.savefig(OUTPUT_DIR+"CMB_PS.png")
+  plt.close()
 
 
   # try reconstructing...
@@ -258,6 +135,8 @@ if args.ksz_reconstruction :
   # plt.savefig(OUTPUT_DIR+'veff_map.png')
   # plt.close()
 
+    
+  print("Plot stuff")
   # Plot velocity power spectra
   vrad_PS = hp.anafast(vrad_map)
   psplot(vrad_PS, label="True velocity", norm=True)
