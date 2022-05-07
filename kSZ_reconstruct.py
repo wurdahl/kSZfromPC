@@ -145,8 +145,13 @@ if True :
   plt.savefig(OUTPUT_DIR+"velocity_PS.png")
   plt.close()
 
+
   # Correlation between velocity maps
-  plt.semilogx( hp.anafast(vrad_map, unnorm_veff_reconst)/np.sqrt(vrad_PS*unnorm_veff_reconst_ps), label="vrad_map")
+  velocityCorrelation = hp.anafast(vrad_map, unnorm_veff_reconst)/np.sqrt(vrad_PS*unnorm_veff_reconst_ps)
+  plt.semilogx( velocityCorrelation, label="vrad_map")
   plt.legend()
   plt.savefig(OUTPUT_DIR+"corr_coeff.png")
   plt.close()
+
+  #save correlation coefficients
+  np.save(OUTPUT_DIR+"corr_coeff"+run_id,velocityCorrelation)
