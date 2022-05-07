@@ -57,11 +57,19 @@ CHI_MAX = chiofz(Z_MAX)
 
 M_CUT_PERCENTILE = 0.0 # 99.999 is top 0.001% of halos
 
+#radius of simulation
+SimRadius = 2048
+#Number of particles in simulation
+SimPart = 2048
+#Number of simulation of divisions
+Divs = 64
+
+run_id = "NS_"+str(NSIDE)+"_R_"+str(SimRadius)+"_P_"+str(SimPart)+"_DV_"+str(Divs)
+
 #################
 ## Working dir ##
 #################
 
-MAPS_OUTPUT_DIR = "recon.s"+("%.2f" % Z_MIN)+"-z"+("%.2f" % Z_MAX)+".mp"+("%.4f" % M_CUT_PERCENTILE)+"_NSIDE-"+str(NSIDE)+"/"
 
 def mkdir_p(path):
   try:
