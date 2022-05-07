@@ -61,16 +61,16 @@ M_CUT_PERCENTILE = 0.0 # 99.999 is top 0.001% of halos
 ## Working dir ##
 #################
 
-# MAPS_OUTPUT_DIR = "halomaps.z"+("%.2f" % Z_MIN)+"-z"+("%.2f" % Z_MAX)+".mp"+("%.4f" % M_CUT_PERCENTILE)+"_NSIDE-"+str(NSIDE)+"/"
+MAPS_OUTPUT_DIR = "recon.s"+("%.2f" % Z_MIN)+"-z"+("%.2f" % Z_MAX)+".mp"+("%.4f" % M_CUT_PERCENTILE)+"_NSIDE-"+str(NSIDE)+"/"
 
-# def mkdir_p(path):
-#   try:
-#     os.makedirs(path)
-#   except OSError as exc:  # Python >2.5
-#     if exc.errno == errno.EEXIST and os.path.isdir(path):
-#       pass
-#     else:
-#       raise
+def mkdir_p(path):
+  try:
+    os.makedirs(path)
+  except OSError as exc:  # Python >2.5
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+      pass
+    else:
+      raise
 
 # mkdir_p(MAPS_OUTPUT_DIR)
 

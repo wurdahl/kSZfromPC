@@ -41,9 +41,9 @@ def getNinv(l, ls, Cltd, ClTT, Cldd) :
 if True :
 
   NSIDE_WORKING = NSIDE
-  #OUTPUT_DIR = MAPS_OUTPUT_DIR+"ksz_reconstruction/"
-  OUTPUT_DIR = "."
-  #mkdir_p(OUTPUT_DIR)
+  OUTPUT_DIR = "./ksz_reconstruction/"+MAPS_OUTPUT_DIR
+  #OUTPUT_DIR = "."
+  mkdir_p(OUTPUT_DIR)
 
   #Overdensity maps
   #tau_map = -1.0*getMap("N_uncertain", NSIDE=NSIDE_WORKING) #
