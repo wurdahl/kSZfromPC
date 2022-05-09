@@ -64,7 +64,7 @@ SimPart = 2048
 #Number of simulation of divisions
 Divs = 64
 #Whether data is lensed or not
-Lensing = False
+Lensing = True
 
 run_id = "NS_"+str(NSIDE)+"_R_"+str(SimRadius)+"_P_"+str(SimPart)+"_DV_"+str(Divs)+"_Lens_"+str(Lensing)
 
