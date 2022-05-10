@@ -45,7 +45,7 @@ ksz_prefac = -sigma_T * fb*mu # * T_CMB
 T_CMB = 2.725e6 # uK
 y_to_tSZ = 0.187 # g(v) for 217 gHZ from table 1 in https://arxiv.org/pdf/1502.01596.pdf
 
-NSIDE = 512
+NSIDE = 2048
 NPIX = 12*NSIDE**2
 OMEGA_PIX = 4.0*np.pi/NPIX
 
@@ -62,9 +62,9 @@ SimRadius = 2048
 #Number of particles in simulation
 SimPart = 2048
 #Number of simulation of divisions
-Divs = 64
+Divs = 400
 #Whether data is lensed or not
-Lensing = True
+Lensing = False
 
 run_id = "NS_"+str(NSIDE)+"_R_"+str(SimRadius)+"_P_"+str(SimPart)+"_DV_"+str(Divs)+"_Lens_"+str(Lensing)
 
