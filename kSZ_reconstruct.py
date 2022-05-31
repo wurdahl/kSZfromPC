@@ -3,6 +3,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import healpy as hp
 import numpy as np
+import camb
 import pywigxjpf as pywig
 from joblib import Parallel, delayed
 import sys, argparse, multiprocessing
@@ -47,22 +48,33 @@ if True :
 
   #Overdensity maps
   #tau_map = -1.0*getMap("N_uncertain", NSIDE=NSIDE_WORKING) #
-  tau_map = -1.0*hp.read_map("./MAPS/overdensity_NS_512_R_2048_P_2048_DV_64.fits")
+  tau_map = -1.0*hp.read_map("./MAPS/overdensity_NS_2048_R_2048_P_2048_DV_400.fits")
   rho_map = -1.0*tau_map#getMap("N_uncertain", NSIDE=NSIDE_WORKING) # _uncertain
   
   #Velocity Maps
   #vrad_map = getMap("vrad", NSIDE=NSIDE_WORKING) # Directly averaged velocity
-  vrad_map = hp.read_map("./MAPS/velocityField_NS_512_R_2048_P_2048_DV_64.fits")
+  vrad_map = hp.read_map("./MAPS/velocityField_NS_2048_R_2048_P_2048_DV_400.fits")
   #kSZ Map
   #ksz_map = getMap("../ksz", NSIDE=NSIDE_WORKING) # websky kSZ
-  ksz_map = hp.read_map("./MAPS/kSZ_NS_512_R_2048_P_2048_DV_64.fits")
+  ksz_map = hp.read_map("./MAPS/kSZ_NS_2048_R_2048_P_2048_DV_400.fits")
   # ksz_map = getMap("ksz", NSIDE=NSIDE_WORKING) # kSZ for this bin only
   # ksz_map = getMap("../ksz_halos", NSIDE=NSIDE_WORKING) # kSZ from halo catalogue only
 
- 
- 
+  #Make Fake CMB
+  h=0.69
+  pars = camb.CAMBparams()
+  pars.set_cosmology(H0=100.0*h, ombh2=0.048*h**2, omch2=0.262*h**2, mnu=0.06, omk=0)
+  pars.InitPower.set_params(As=2e-9, ns=0.96, r=0)
+  pars.set_for_lmax(6144, lens_potential_accuracy=0)
+  results = camb.get_results(pars)
+  powers =results.get_cmb_power_spectra(pars, CMB_unit='K')
+  l=np.arange(0,len(powers['total'][:,0]))
+  cambFactor = l*(l+1)/(2*np.pi)
+  CMB_camb = powers['total'][:,0]/cambFactor
+  CMB_camb[0]=0.0
+  
   #Read in CMB Map
-  CMB_map = 0.0*hp.sphtfunc.synfast(cls=np.ones(6144),nside=512);#hp.alm2map(CMB_alms, NSIDE_WORKING)
+  CMB_map = hp.sphtfunc.synfast(CMB_camb,nside=NSIDE);#hp.alm2map(CMB_alms, NSIDE_WORKING)
   CMB_alms = hp.map2alm(CMB_map) #hp.fitsfunc.read_alm('lensed_alm.fits').astype(np.complex)
   #Higher redshift kSZ that we aven't modelled- Later
   #patchy_ksz_map = getMap("../ksz_patchy", NSIDE=NSIDE_WORKING) # websky patchy kSZ
@@ -137,6 +149,14 @@ if True :
 
     
   print("Plot stuff")
+
+  # Plot CMB and kSZ power spectra power spectra
+  plt.loglog(CMB_PS)
+  plt.loglog(ksz_PS)
+  plt.legend(['CMB','kSZ'])
+  plt.savefig(OUTPUT_DIR+"CMB_normal.png")
+  plt.close()
+
   # Plot velocity power spectra
   vrad_PS = hp.anafast(vrad_map)
   psplot(vrad_PS, label="True velocity", norm=True)
