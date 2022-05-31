@@ -16,7 +16,8 @@ from joblib import Parallel, delayed
 
 #import matplotlib.pyplot as plt
 import healpy as hp
-nside = 2048
+#The third command line arguement sets the nside
+nside = int(sys.argv[3])
 npix = hp.nside2npix(nside)
 
 #%matplotlib inline
@@ -24,22 +25,30 @@ npix = hp.nside2npix(nside)
 
 # In[3]:
 
+#Hubble parameter
+h = 0.69
 
-rangeOfInterest = 2048 #only look at particles within this
+#The fourth arguement is the range of interest
+rangeOfInterest = int(sys.argv[4])/h #only look at particles within this
 
-radialDivs = 300
+#The fifth command line arguemnt sets the number of radial divisions to use
+#This is the number of radial blocks the data will be sorted into
+radialDivs = int(sys.argv[5])
 
 ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
-boxSize= 4096 # side length of box
+boxSize= 4096/h # side length of box
 particleSize = 2048 #the total number of particles is n**3
 
-run_Ident = "_NS_"+str(nside)+"_R_"+str(rangeOfInterest)+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)
+#The second command line arguement is the random seed used for the l-picola simulation
+SimSeed = sys.argv[2]
 
-direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/DataP2048R2048/"
+run_Ident = "_NS_"+str(nside)+"_R_"+str(int(rangeOfInterest))+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)+"_Sd_"+SimSeed
 
-#Hubble parameter
-h = 0.69
+#the name of the directory in AllData where the data you want to analyze
+dataDirec = sys.argv[1]+"/"
+
+direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/"+dataDirec
 
 #this can convert cartesian data into radial data
 #velocity still needs to be divided by angular diamter distance squared
@@ -112,7 +121,10 @@ def readSetToBins(fileName, index):
         unf_read_file(path, p_list=tempArray)
         print("Reading file "+path)
         reshaped = np.reshape(tempArray,(-1,6))
-            
+        
+        #divide the position particles by h to convert them into MPc instead of MPc/h
+        reshaped = reshaped/np.array([h,h,h,1,1,1])
+    
         tempArray = []
             
         numParticles = reshaped.shape[0]
@@ -239,7 +251,7 @@ def moving_average(a, n=2) :
     return ret[n - 1:] / n
 
 #convert the l-picola coordinates into actual MPc and get the value in between the layer boundaries
-comovValues = moving_average(ROIs)/h
+comovValues = moving_average(ROIs)
 
 #convert the comoving coordinates into redshift values
 redshiftValues = getRedshift(comovValues)
@@ -314,14 +326,13 @@ convergenceFactors = np.zeros((radialDivs,radialDivs));
 dr = rangeOfInterest/radialDivs
 
 #for each layer of the kSZ determine the accumalted convergence
-for kSZLayer in range(0,radialDivs):
+for lensedLayer in range(0,radialDivs):
     #add up the convergence contribution of every intervening layer from 0 up to the current kSZ layer
-    for lensingLayer in range(0,kSZLayer):
-        kSZDist = (kSZLayer+0.5)*(dr)
+    for lensingLayer in range(0,lensedLayer):
+        lensedDist = (lensedLayer+0.5)*(dr)
         lensingLayerDist = (lensingLayer+0.5)*(dr)
         
-        convergenceFactors[kSZLayer,lensingLayer] = (1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(kSZDist-lensingLayerDist)/kSZDist
-
+        convergenceFactors[lensedLayer,lensingLayer] = (1/(lensingLayerDist*getScalingFactor(lensingLayerDist)))*(lensedDist-lensingLayerDist)/lensedDist
 
 # In[33]:
 
@@ -391,7 +402,7 @@ convergenceMaps = prefactors*convergenceMaps
 
 
 #hp.mollview(np.sum(convergenceMaps,axis=0))
-hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", np.sum(convergenceMaps,axis=0), overwrite=True)
+hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[-1], overwrite=True)
 
 hp.fitsfunc.write_map("MAPS/midConvergence"+run_Ident+".fits", convergenceMaps[radialDivs//2], overwrite=True)
 
