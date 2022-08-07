@@ -48,7 +48,7 @@ run_Ident = "_NS_"+str(nside)+"_R_"+str(int(rangeOfInterest))+"_P_"+str(particle
 #the name of the directory in AllData where the data you want to analyze
 dataDirec = sys.argv[1]+"/"
 
-direc = "/storage1/fs1/jmertens/Active/u.william/home/AllData/"+dataDirec
+direc = "./"+dataDirec
 
 #this can convert cartesian data into radial data
 #velocity still needs to be divided by angular diamter distance squared
@@ -167,7 +167,7 @@ def readSetToBins(fileName, index):
 num_Files = len(inputFiles)
 numProcess = num_Files
 
-returnValues = Parallel(n_jobs=24)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
+returnValues = Parallel(n_jobs=32)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
@@ -261,25 +261,26 @@ redshiftValues = getRedshift(comovValues)
 #for i in range(1,radialDivs):
 #    integratedOver = integratedOver + (outputCount[i]/np.average(outputCount[i])-1)*dNdx[i]*(ROIs[i+1]-ROIs[i])
 
-np.save("MAPS/dNdz"+run_Ident,dNdx)
-np.save("MAPS/redshifts"+run_Ident,redshiftValues)
+#np.save("MAPS/dNdz"+run_Ident,dNdx)
+#np.save("MAPS/redshifts"+run_Ident,redshiftValues)
 
-hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
-
+#hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
+np.save("MAPS/overdensity/"+run_Ident, overdensity)
 #Save full density data:
-np.save("MAPS/density"+run_Ident,outputCount)
+#np.save("MAPS/density"+run_Ident,outputCount)
 
 #hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integratedOver, overwrite=True)
 
-hp.fitsfunc.write_map("MAPS/layerOverdensity"+run_Ident+".fits", outputCount[-1,:], overwrite=True)
+#hp.fitsfunc.write_map("MAPS/layerOverdensity"+run_Ident+".fits", outputCount[-1,:], overwrite=True)
 
-hp.fitsfunc.write_map("MAPS/midlayerOverdensity"+run_Ident+".fits", outputCount[radialDivs//2,:], overwrite=True)
+#hp.fitsfunc.write_map("MAPS/midlayerOverdensity"+run_Ident+".fits", outputCount[radialDivs//2,:], overwrite=True)
 
 # In[13]:
 
 velocityFieldMap = np.sum(velocityField,axis=0)
 
-hp.fitsfunc.write_map("MAPS/velocityField"+run_Ident+".fits", velocityFieldMap, overwrite=True)
+#hp.fitsfunc.write_map("MAPS/velocityField"+run_Ident+".fits", velocityFieldMap, overwrite=True)
+np.save("MAPS/velocityField/"+run_Ident, velocityFieldMap)
 
 # In[15]:
 
@@ -309,8 +310,9 @@ correctUnits = adjustedVelocityField*(unitMass*unitVelocity/unitLength**2)
 
 almosterkSZ = -(sigmaT*fb*mu)*(outputCount*correctUnits/(c*hp.nside2resol(nside)**2))
 #hp.mollview(almosterkSZ,xsize=3200,min=-2*10**-6,max=2*10**-6)
-hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0), overwrite=True)
-
+#hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0), overwrite=True)
+#hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0))
+np.save("MAPS/kSZ/"+run_Ident, np.sum(almosterkSZ[1:],axis=0))
 
 # In[16]:
 
@@ -373,7 +375,7 @@ npix = hp.nside2npix(nside)
 numProcess = 64
 pixelSteps = np.linspace(0,npix,numProcess+1).astype(int)
 print("Starting to Calculate Convergences")
-convergenceReturn = Parallel(n_jobs=30)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
+convergenceReturn = Parallel(n_jobs=32)(delayed(getConvergenceForRange)(pixelSteps[i],pixelSteps[i+1]) for i in range(0,numProcess))
 print("Calculated Convergences")
 
 #to each pixel:\n#convergenceReturn = Parallel(n_jobs=npix)(delayed(getConvergenceForPixel)(pixel) for pixel in range(0,npix))')
@@ -402,11 +404,11 @@ convergenceMaps = prefactors*convergenceMaps
 
 
 #hp.mollview(np.sum(convergenceMaps,axis=0))
-hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[-1], overwrite=True)
+#hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[-1], overwrite=True)
 
-hp.fitsfunc.write_map("MAPS/midConvergence"+run_Ident+".fits", convergenceMaps[radialDivs//2], overwrite=True)
+#hp.fitsfunc.write_map("MAPS/midConvergence"+run_Ident+".fits", convergenceMaps[radialDivs//2], overwrite=True)
 
-np.save("MAPS/convergence"+run_Ident,convergenceMaps)
+#np.save("MAPS/convergence"+run_Ident,convergenceMaps)
 
 # In[ ]:
 kalms = hp.sphtfunc.map2alm(convergenceMaps[-1])
@@ -425,7 +427,7 @@ lensedOverdensity = np.zeros(npix)
 for i in range(1,radialDivs):
     kalms=hp.sphtfunc.map2alm(convergenceMaps[i])
     
-    lensPotential = kalms/(lFactor)
+    lensPotential = -2.0*kalms/(lFactor)
     lensPotential[0]=0+0j
     
     divLensPot = hp.alm2map_der1(lensPotential,nside)
@@ -440,5 +442,6 @@ for i in range(1,radialDivs):
 
     lensedOverdensity = lensedOverdensity + hp.pixelfunc.get_interp_val(outputCount[i],deflectedTheta, deflectedPhi)
 
-hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
-hp.fitsfunc.write_map("MAPS/lensedOverdensity"+run_Ident+".fits", lensedOverdensity, overwrite=True)
+#hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
+np.save("MAPS/lensedkSZ/"+run_Ident, lensedkSZ)
+np.save("MAPS/lensedOverdensity/"+run_Ident, lensedOverdensity)
