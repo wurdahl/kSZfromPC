@@ -57,7 +57,7 @@ cpdef convertToSpherical(double[:,:] xyz):
     
     cdef double[:,:] unitVectors = getRadialUnitVecs(sphericalConversion)
 
-    #get the radial 
+    #get the radial component of velocity
     for i in range(rows):
         sphericalConversion_view[i,3] = unitVectors[i,0]*xyz[i,3]+unitVectors[i,1]*xyz[i,4]+unitVectors[i,2]*xyz[i,5]
 
