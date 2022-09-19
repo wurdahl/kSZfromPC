@@ -30,12 +30,12 @@ h = 0.69
 
 #The fourth arguement is the range of interest
 rangeOfInterest = int(sys.argv[4])/h #only look at particles within this
-
+innerRadiusOfInterest = rangeOfInterest/2
 #The fifth command line arguemnt sets the number of radial divisions to use
 #This is the number of radial blocks the data will be sorted into
 radialDivs = int(sys.argv[5])
 
-ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
+ROIs = np.linspace(innerRadiusOfInterest,rangeOfInterest, radialDivs+1)
 
 boxSize= 4096/h # side length of box
 particleSize = 2048 #the total number of particles is n**3
@@ -43,7 +43,7 @@ particleSize = 2048 #the total number of particles is n**3
 #The second command line arguement is the random seed used for the l-picola simulation
 SimSeed = sys.argv[2]
 
-run_Ident = "_NS_"+str(nside)+"_R_"+str(int(rangeOfInterest))+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)+"_Sd_"+SimSeed
+run_Ident = "_NS_"+str(nside)+"_R_"+str(int(innerRadiusOfInterest))+"_"+str(int(rangeOfInterest))+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)+"_Sd_"+SimSeed
 
 #the name of the directory in AllData where the data you want to analyze
 dataDirec = sys.argv[1]+"/"
@@ -158,6 +158,9 @@ def readSetToBins(fileName, index):
         
         #If the particle is outside the circle, then it is set to negative one, which will be used later to exclude it
         partRadial[(sphereConversion[:,0]>ROIs[j+1])] = -1
+
+	#also is the particle is within the minimum radius, then it is also set to -1 so that it will be excluded
+	partRadial[(sphereConversion[:,0]<ROIs[0])] = -1
                                           
     #print(str(index)+" done")
    
