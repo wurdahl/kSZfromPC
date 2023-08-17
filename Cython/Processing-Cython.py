@@ -2,17 +2,11 @@
 # coding: utf-8
 import sys
 print(sys.version)
-# In[1]:
-
 
 import struct
 import numpy as np
 import os
 from joblib import Parallel, delayed
-
-
-# In[2]:
-
 
 #import matplotlib.pyplot as plt
 import healpy as hp
@@ -20,22 +14,16 @@ import healpy as hp
 nside = int(sys.argv[3])
 npix = hp.nside2npix(nside)
 
-#%matplotlib inline
-
-
-# In[3]:
-
 #Hubble parameter
 h = 0.69
 
 #The fourth arguement is the range of interest
 rangeOfInterest = int(sys.argv[4])/h #only look at particles within this
-innerRadiusOfInterest = rangeOfInterest/2
 #The fifth command line arguemnt sets the number of radial divisions to use
 #This is the number of radial blocks the data will be sorted into
 radialDivs = int(sys.argv[5])
 
-ROIs = np.linspace(innerRadiusOfInterest,rangeOfInterest, radialDivs+1)
+ROIs = np.linspace(0,rangeOfInterest, radialDivs+1)
 
 boxSize= 4096/h # side length of box
 particleSize = 2048 #the total number of particles is n**3
@@ -43,7 +31,7 @@ particleSize = 2048 #the total number of particles is n**3
 #The second command line arguement is the random seed used for the l-picola simulation
 SimSeed = sys.argv[2]
 
-run_Ident = "_NS_"+str(nside)+"_R_"+str(int(innerRadiusOfInterest))+"_"+str(int(rangeOfInterest))+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)+"_Sd_"+SimSeed
+run_Ident = "_NS_"+str(nside)+"_R_"+str(int(rangeOfInterest))+"_P_"+str(particleSize)+"_DV_"+str(radialDivs)+"_Sd_"+SimSeed
 
 #the name of the directory in AllData where the data you want to analyze
 dataDirec = sys.argv[1]+"/"
@@ -160,7 +148,7 @@ def readSetToBins(fileName, index):
         partRadial[(sphereConversion[:,0]>ROIs[j+1])] = -1
 
 	#also is the particle is within the minimum radius, then it is also set to -1 so that it will be excluded
-	partRadial[(sphereConversion[:,0]<ROIs[0])] = -1
+        partRadial[(sphereConversion[:,0]<ROIs[0])] = -1
                                           
     #print(str(index)+" done")
    
@@ -170,7 +158,11 @@ def readSetToBins(fileName, index):
 num_Files = len(inputFiles)
 numProcess = num_Files
 
-returnValues = Parallel(n_jobs=32)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
+if(num_Files==0):
+    print("no files found, likely ran out of memory in l-picola")
+    exit()
+
+returnValues = Parallel(n_jobs=6)(delayed(readSetToBins)(inputFiles[i], i) for i in range(0,numProcess))
 
 #big pause here for some reason, the program says its done with the last file but then it take 20 seconds to move on
 
@@ -228,6 +220,12 @@ adjustedVelocityField = allMaps[2]
 
 del allMaps
 
+#check for NANs
+if(np.any(np.isnan(outputCount))):
+    print("NAN is outputCount, program failure")
+    exit()
+
+
 #divide velocity field by output count in otder to get average velocity in each cell
 velocityField = np.divide(velocityField,outputCount)
 velocityField[velocityField==np.inf] = 0
@@ -247,6 +245,10 @@ dNdx = np.sum(outputCount,axis=1)/np.sum(outputCount)
 n_bar = np.average(numcount)
 overdensity = (numcount-n_bar)/n_bar
 
+if(np.any(np.isnan(overdensity))):
+    print("overdensity is nan, program failure")
+    exit()
+
 #we want the middle of the ROIs to represent where the box is
 def moving_average(a, n=2) :
     ret = np.cumsum(a, dtype=float)
@@ -259,31 +261,28 @@ comovValues = moving_average(ROIs)
 #convert the comoving coordinates into redshift values
 redshiftValues = getRedshift(comovValues)
 
-#This is not the way I actually integrate the data
-#integratedOver = np.zeros(npix)
-#for i in range(1,radialDivs):
-#    integratedOver = integratedOver + (outputCount[i]/np.average(outputCount[i])-1)*dNdx[i]*(ROIs[i+1]-ROIs[i])
-
-#np.save("MAPS/dNdz"+run_Ident,dNdx)
-#np.save("MAPS/redshifts"+run_Ident,redshiftValues)
-
-#hp.fitsfunc.write_map("MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
-np.save("MAPS/overdensity/"+run_Ident, overdensity)
+#hp.fitsfunc.write_map("./MAPS/overdensity"+run_Ident+".fits", overdensity, overwrite=True)
+np.save("./MAPS/overdensity/"+run_Ident, overdensity)
 #Save full density data:
-#np.save("MAPS/density"+run_Ident,outputCount)
+#np.save("./MAPS/density"+run_Ident,outputCount)
 
-#hp.fitsfunc.write_map("MAPS/integratedOverdensity"+run_Ident+".fits", integratedOver, overwrite=True)
-
-#hp.fitsfunc.write_map("MAPS/layerOverdensity"+run_Ident+".fits", outputCount[-1,:], overwrite=True)
-
-#hp.fitsfunc.write_map("MAPS/midlayerOverdensity"+run_Ident+".fits", outputCount[radialDivs//2,:], overwrite=True)
-
-# In[13]:
+#Save the eight Super Bins of overdenstiy starting from half way to the edge
+start = radialDivs//2
+for i in range(0,8):
+    layerCount = np.sum(outputCount[start+start//8*(i):start+start//8*(i+1)],axis=0)
+    layerAvg = np.average(layerCount)
+    np.save("./MAPS/overdensity/"+run_Ident+"_SB_"+str(i), (layerCount-layerAvg)/layerAvg)
 
 velocityFieldMap = np.sum(velocityField,axis=0)
 
-#hp.fitsfunc.write_map("MAPS/velocityField"+run_Ident+".fits", velocityFieldMap, overwrite=True)
-np.save("MAPS/velocityField/"+run_Ident, velocityFieldMap)
+#hp.fitsfunc.write_map("./MAPS/velocityField"+run_Ident+".fits", velocityFieldMap, overwrite=True)
+np.save("./MAPS/velocityField/"+run_Ident, velocityFieldMap)
+
+#Save the eight Super Bins of velocityField starting from half way to the edge
+start = radialDivs//2
+for i in range(0,8):
+    np.save("./MAPS/velocityField/"+run_Ident+"_SB_"+str(i), np.sum(velocityField[start+start//8*(i):start+start//8*(i+1)],axis=0))   
+
 
 # In[15]:
 
@@ -313,17 +312,9 @@ correctUnits = adjustedVelocityField*(unitMass*unitVelocity/unitLength**2)
 
 almosterkSZ = -(sigmaT*fb*mu)*(outputCount*correctUnits/(c*hp.nside2resol(nside)**2))
 #hp.mollview(almosterkSZ,xsize=3200,min=-2*10**-6,max=2*10**-6)
-#hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0), overwrite=True)
-#hp.fitsfunc.write_map("MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0))
-np.save("MAPS/kSZ/"+run_Ident, np.sum(almosterkSZ[1:],axis=0))
-
-# In[16]:
-
-
-#plt.hist(almosterkSZ,bins=np.linspace(-2*10**-6,2*10**-6));
-
-
-# In[24]:
+#hp.fitsfunc.write_map("./MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0), overwrite=True)
+#hp.fitsfunc.write_map("./MAPS/kSZ"+run_Ident+".fits", np.sum(almosterkSZ[1:],axis=0))
+np.save("./MAPS/kSZ/"+run_Ident, np.sum(almosterkSZ[1:],axis=0))
 
 
 convergenceFactors = np.zeros((radialDivs,radialDivs));
@@ -402,18 +393,13 @@ prefactors = (3/2)*H0Squared*OmegaM*((boxSize)**3)/(particleSize**3*hp.pixelfunc
 
 convergenceMaps = prefactors*convergenceMaps
 
-
-# In[37]:
-
-
 #hp.mollview(np.sum(convergenceMaps,axis=0))
-#hp.fitsfunc.write_map("MAPS/convergence"+run_Ident+".fits", convergenceMaps[-1], overwrite=True)
+#hp.fitsfunc.write_map("./MAPS/convergence"+run_Ident+".fits", convergenceMaps[-1], overwrite=True)
 
-#hp.fitsfunc.write_map("MAPS/midConvergence"+run_Ident+".fits", convergenceMaps[radialDivs//2], overwrite=True)
+#hp.fitsfunc.write_map("./MAPS/midConvergence"+run_Ident+".fits", convergenceMaps[radialDivs//2], overwrite=True)
 
-#np.save("MAPS/convergence"+run_Ident,convergenceMaps)
+#np.save("./MAPS/convergence"+run_Ident,convergenceMaps)
 
-# In[ ]:
 kalms = hp.sphtfunc.map2alm(convergenceMaps[-1])
 
 lmax=hp.Alm.getlmax(len(kalms))
@@ -424,7 +410,7 @@ lFactor[0] = 1
 baseAngle = hp.pixelfunc.pix2ang(nside, np.arange(0,npix))
 
 lensedkSZ = np.zeros(npix)
-lensedOverdensity = np.zeros(npix)
+lensedOverdensity = np.zeros((radialDivs,npix))
 
 
 for i in range(1,radialDivs):
@@ -435,16 +421,33 @@ for i in range(1,radialDivs):
     
     divLensPot = hp.alm2map_der1(lensPotential,nside)
     
-    deflectedTheta = baseAngle[0]+divLensPot[1]
-    deflectedPhi = baseAngle[1]+divLensPot[2]
+    #deflectedTheta = baseAngle[0]+divLensPot[1]
+    deflectedTheta = baseAngle[0]
+    #deflectedPhi = baseAngle[1]+divLensPot[2]
+    deflectedPhi = baseAnlgle[1]+0.001
 
     if(i%50==0):
         print("add layer "+ str(i))
  
     lensedkSZ = lensedkSZ + hp.pixelfunc.get_interp_val(almosterkSZ[i],deflectedTheta,deflectedPhi)
 
-    lensedOverdensity = lensedOverdensity + hp.pixelfunc.get_interp_val(outputCount[i],deflectedTheta, deflectedPhi)
+    lensedOverdensity[i] = hp.pixelfunc.get_interp_val(outputCount[i],deflectedTheta, deflectedPhi)
 
-#hp.fitsfunc.write_map("MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
-np.save("MAPS/lensedkSZ/"+run_Ident, lensedkSZ)
-np.save("MAPS/lensedOverdensity/"+run_Ident, lensedOverdensity)
+print("The averages for lensedOverdensity are "+str(np.mean(lensedOverdensity,axis=1)))
+print("The average for lensedkSZ is "+str(np.mean(lensedkSZ)))
+
+#hp.fitsfunc.write_map("./MAPS/lensedkSZ"+run_Ident+".fits", lensedkSZ, overwrite=True)
+np.save("./MAPS/lensedkSZ/"+run_Ident, lensedkSZ)
+
+lensedOverdensityOverall = np.sum(lensedOverdensity,axis=0)
+lensedOverdensityOverall = lensedOverdensityOverall/np.mean(lensedOverdensityOverall)-1
+
+np.save("./MAPS/lensedOverdensity/"+run_Ident, lensedOverdensityOverall)
+
+#Save the eight Super Bins of lensed overdensity starting from half way to the edge
+start = radialDivs//2
+for i in range(0,8):
+    superBinLensedOverdensity = np.sum(lensedOverdensity[start+start//8*(i):start+start//8*(i+1)],axis=0)
+    superBinLensedOverdensity = superBinLensedOverdensity/np.mean(superBinLensedOverdensity)-1
+    np.save("./MAPS/lensedOverdensity/"+run_Ident+"_SB_"+str(i), superBinLensedOverdensity )   
+
